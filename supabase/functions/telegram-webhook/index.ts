@@ -14,7 +14,11 @@ serve(async (req) => {
   // Get secrets from environment
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.3");
+  const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const adminId = Deno.env.get("ADMIN_USER_ID");
+  const { createClient } = await import(
+    "https://esm.sh/@supabase/supabase-js@2.38.3"
+  );
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Prepare message data
@@ -29,6 +33,15 @@ serve(async (req) => {
 
   if (error) {
     console.error("Supabase error:", error);
+  }
+
+  if (telegramToken && adminId) {
+    const textToSend = `Message from ${username ?? user_id}: ${text}`;
+    await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: adminId, text: textToSend }),
+    });
   }
 
   return new Response("ok", { status: 200 });
