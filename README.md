@@ -68,11 +68,35 @@ After saving, any user can invoke `/hello` and receive the stored response. Comm
 - `/toggleaccess` — Locks or unlocks investor actions, e.g., during maintenance.
 
 ### Flow Summary
-`/start → /register`  
+`/start → /register`
  ├─ if new user: save registration  
  └─ if existing user: inform already registered  
-`/wallet → /invest → /myshares → /report → /withdraw`  
-  
+`/wallet → /invest → /myshares → /report → /withdraw`
+
 Admin panel: `/admin → /listusers → /approve → /distribute → /broadcast`
+
+## Payment Handling & Screenshots
+
+The bot now guides users with emoji‑rich messages and a quick‑tap menu. When users send `/wallet`, the bot prompts for a USDT
+address and stores it in `bot_users.wallet_address`. Uploading a payment screenshot after `/invest` saves the image to Supabase
+Storage and records the path in a `payments` table for admin review.
+
+Create the storage bucket and table:
+
+```
+-- one‑time setup
+supabase storage buckets create payment_receipts
+
+create table payments (
+  id bigint generated always as identity primary key,
+  user_id bigint references bot_users(id),
+  screenshot_path text,
+  status text default 'pending',
+  created_at timestamp with time zone default now()
+);
+```
+
+Messages are followed by gentle reminders if the user stays inactive, and older prompts are auto‑deleted after a few minutes to
+keep chats tidy. Admin‑only commands are guarded so regular users see a friendly “command restricted” notice.
 
 
