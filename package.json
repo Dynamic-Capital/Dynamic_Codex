@@ -1,0 +1,12 @@
+{
+  "name": "dynamic-codex",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node test-supabase.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.6",
+    "dotenv": "^16.4.5"
+  }
+}
