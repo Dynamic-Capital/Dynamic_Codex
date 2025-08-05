@@ -14,7 +14,14 @@ This approach works from any device and avoids a local Deno setup. Expect a shor
 
 ## Supabase Connection Test
 
-Run `npm test` to execute a small script that verifies your `.env` configuration and confirms the `bot_users` table is reachable in Supabase.
+Create a `.env` file with your project credentials:
+
+```
+SUPABASE_URL=your-project-url
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+Run `npm test` to execute a small script that verifies the configuration and confirms the `bot_users` table is reachable in Supabase.
 
 ## Command Map
 
