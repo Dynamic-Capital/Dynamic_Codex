@@ -21,7 +21,28 @@ SUPABASE_URL=your-project-url
 SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Run `npm test` to execute a small script that verifies the configuration and confirms the `bot_users` table is reachable in Supabase.
+Run `npm test` to execute a small script that verifies the configuration and confirms the `bot_users` and `bot_commands` tables are reachable in Supabase.
+
+### Bot Commands Table
+
+Create a `bot_commands` table so the bot can store custom commands defined from Telegram:
+
+```
+create table bot_commands (
+  command text primary key,
+  response text not null
+);
+```
+
+### Program the Bot from Telegram
+
+Admins can teach the bot new commands directly from a chat using `/setcmd`:
+
+```
+/setcmd /hello Hello from the dynamic bot!
+```
+
+After saving, any user can invoke `/hello` and receive the stored response. Commands are stored in the `bot_commands` table above.
 
 ## Command Flow
 
