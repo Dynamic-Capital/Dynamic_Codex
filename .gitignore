@@ -1,3 +1,5 @@
 node_modules
 .env
+# Ignore auto-generated Supabase client and types
+src/integrations/supabase/
 

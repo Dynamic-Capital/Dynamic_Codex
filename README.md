@@ -39,6 +39,8 @@ ADMIN_USER_IDS=comma-separated-telegram-ids
 
 Run `npm test` to execute a small script that verifies the configuration and confirms the `bot_users` and `bot_commands` tables are reachable in Supabase.
 
+> **Note:** Some tools may generate files under `src/integrations/supabase` that contain your project URL and keys. These files are not required here and should remain uncommitted.
+
 ## Database Schema & Security
 
 The SQL in `supabase/schema.sql` creates all required tables (`bot_users`, `bot_commands`, `payments`, and `messages`) and enables row level security with policies that restrict access to the owning user or service role. Apply it to your project with:
