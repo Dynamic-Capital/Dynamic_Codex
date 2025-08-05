@@ -5,11 +5,11 @@ const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const BINANCE_API_KEY = Deno.env.get("BINANCE_API_KEY");
 const BINANCE_SECRET_KEY = Deno.env.get("BINANCE_SECRET_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_URL = "https://tiqpsykeueqfajcerckd.supabase.co";
+const SUPABASE_KEY = Deno.env.get("SUPABASE_KEY");
 const ADMIN_USER_IDS = ["225513686"];
 
-if (!BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+if (!BOT_TOKEN || !SUPABASE_KEY) {
   throw new Error("Missing required environment variables");
 }
 
@@ -72,11 +72,25 @@ serve(async (req) => {
     return new Response("No message to process", { status: 200 });
   }
 
-  const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY!);
 
   const { id: user_id, username } = message.from;
   const chat_id = message.chat.id;
-  const text = message.text || "";
+  let text = message.text || "";
+  const lower = text.toLowerCase();
+  if (!text.startsWith("/")) {
+    if (lower.includes("register")) text = "/register";
+    else if (lower.includes("wallet")) text = "/wallet";
+    else if (lower.includes("invest")) text = "/invest";
+    else if (lower.includes("myshares")) text = "/myshares";
+    else if (lower.includes("report")) text = "/report";
+    else if (lower.includes("withdraw")) text = "/withdraw";
+    else if (lower.includes("support")) text = "/support";
+    else if (lower.includes("help")) text = "/help";
+    else if (lower.includes("about")) text = "/about";
+    else if (lower.includes("contact")) text = "/contact";
+    else if (lower.includes("promo")) text = "/promo";
+  }
 
   const ADMIN_COMMANDS = [
     "/admin",
@@ -88,6 +102,10 @@ serve(async (req) => {
     "/listinvestments",
     "/toggleaccess",
     "/setcmd",
+    "/setwelcome",
+    "/setpromo",
+    "/setabout",
+    "/setcontact",
   ];
 
   if (
@@ -102,19 +120,27 @@ serve(async (req) => {
   if (text === "/start") {
     const keyboard = {
       keyboard: [
-        [{ text: "/register" }, { text: "/wallet" }],
-        [{ text: "/invest" }, { text: "/myshares" }],
-        [{ text: "/report" }, { text: "/withdraw" }],
-        [{ text: "/support" }, { text: "/help" }],
+        [{ text: "📝 Register" }, { text: "💼 Wallet" }],
+        [{ text: "💰 Invest" }, { text: "📊 MyShares" }],
+        [{ text: "📈 Report" }, { text: "💸 Withdraw" }],
+        [{ text: "ℹ️ About" }, { text: "📞 Contact" }],
+        [{ text: "🎉 Promo" }, { text: "🆘 Support" }],
+        [{ text: "❓ Help" }],
       ],
       resize_keyboard: true,
     };
+    const { data: welcome } = await supabase
+      .from("bot_commands")
+      .select("response")
+      .eq("command", "welcome")
+      .single();
     const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id,
         text:
+          welcome?.response ||
           "👋 *Welcome to Dynamic Capital Fund Bot!*\nUse the menu below to get started.",
         parse_mode: "Markdown",
         reply_markup: keyboard,
@@ -176,6 +202,85 @@ serve(async (req) => {
       await sendMessage(chat_id, `❌ Upload failed: ${error.message}`);
     }
     pendingPayment.delete(user_id);
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text === "/promo") {
+    const { data } = await supabase
+      .from("bot_commands")
+      .select("response")
+      .eq("command", "promo")
+      .single();
+    await sendMessage(
+      chat_id,
+      data?.response || "🎉 No promo available right now.",
+    );
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text === "/about") {
+    const { data } = await supabase
+      .from("bot_commands")
+      .select("response")
+      .eq("command", "about")
+      .single();
+    await sendMessage(
+      chat_id,
+      data?.response || "ℹ️ About information not set.",
+    );
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text === "/contact") {
+    const { data } = await supabase
+      .from("bot_commands")
+      .select("response")
+      .eq("command", "contact")
+      .single();
+    await sendMessage(
+      chat_id,
+      data?.response || "📞 Contact information not set.",
+    );
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text.startsWith("/setwelcome ")) {
+    const msg = text.replace("/setwelcome ", "");
+    await supabase.from("bot_commands").upsert({
+      command: "welcome",
+      response: msg,
+    });
+    await sendMessage(chat_id, "✅ Welcome message updated.");
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text.startsWith("/setpromo ")) {
+    const msg = text.replace("/setpromo ", "");
+    await supabase.from("bot_commands").upsert({
+      command: "promo",
+      response: msg,
+    });
+    await sendMessage(chat_id, "✅ Promo updated.");
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text.startsWith("/setabout ")) {
+    const msg = text.replace("/setabout ", "");
+    await supabase.from("bot_commands").upsert({
+      command: "about",
+      response: msg,
+    });
+    await sendMessage(chat_id, "✅ About info updated.");
+    return new Response("ok", { status: 200 });
+  }
+
+  if (text.startsWith("/setcontact ")) {
+    const msg = text.replace("/setcontact ", "");
+    await supabase.from("bot_commands").upsert({
+      command: "contact",
+      response: msg,
+    });
+    await sendMessage(chat_id, "✅ Contact info updated.");
     return new Response("ok", { status: 200 });
   }
 

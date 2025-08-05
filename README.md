@@ -26,12 +26,10 @@ This approach works from any device and avoids a local Deno setup. Expect a shor
 
 ## Supabase Connection Test
 
-Copy `.env.example` to `.env` and fill in your credentials:
+The client points to the project at `https://tiqpsykeueqfajcerckd.supabase.co`. Copy `.env.example` to `.env` and add your key:
 
 ```
-SUPABASE_URL=your-project-url
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=service-role-key
+SUPABASE_KEY=service-role-or-anon-key
 TELEGRAM_BOT_TOKEN=bot-token
 OPENAI_API_KEY=sk-...
 BINANCE_API_KEY=...
@@ -80,10 +78,13 @@ After saving, any user can invoke `/hello` and receive the stored response. Comm
 - `/myshares` *(Coming Soon)* — Displays share percentage, capital, and reinvested amount from the `shares` table.
 - `/report` *(Coming Soon)* — Shows monthly profit breakdown and personal payout details when available.
 - `/withdraw` *(Coming Soon)* — Initiates a withdrawal request after lock‑in checks and routes to admin approval.
+- `/promo` — Shows the latest promotional message set by admins.
+- `/about` — Displays information about the project.
+- `/contact` — Provides contact details for reaching the team.
 - `/support` — Provides contact info such as `@DynamicCapitalAdmin` and optional FAQ links.
 - `/help` — Lists all available commands with ✅ ready or ⏳ coming soon indicators.
 
-### Admin Commands
+-### Admin Commands
 - `/admin` *(Coming Soon)* — Text menu for managing users, investments, and reports.
 - `/listusers` — Displays all registered users from `bot_users`.
 - `/approve <TXID>` — Confirms an investment, updates the `shares` table, and notifies the user.
@@ -92,6 +93,10 @@ After saving, any user can invoke `/hello` and receive the stored response. Comm
 - `/broadcast <message>` — Sends a custom message to every user.
 - `/listinvestments` — Lists all pending investments with TXID and amount.
 - `/toggleaccess` — Locks or unlocks investor actions, e.g., during maintenance.
+- `/setwelcome <text>` — Update the message used for `/start`.
+- `/setpromo <text>` — Update the message returned by `/promo`.
+- `/setabout <text>` — Update the `/about` response.
+- `/setcontact <text>` — Update the `/contact` response.
 
 ### Flow Summary
 `/start → /register`
