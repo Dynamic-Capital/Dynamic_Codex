@@ -26,14 +26,28 @@ This approach works from any device and avoids a local Deno setup. Expect a shor
 
 ## Supabase Connection Test
 
-Create a `.env` file with your project credentials:
+Copy `.env.example` to `.env` and fill in your credentials:
 
 ```
 SUPABASE_URL=your-project-url
 SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=service-role-key
+TELEGRAM_BOT_TOKEN=bot-token
+OPENAI_API_KEY=sk-...
+BINANCE_API_KEY=...
+BINANCE_SECRET_KEY=...
+ADMIN_USER_IDS=comma-separated-telegram-ids
 ```
 
 Run `npm test` to execute a small script that verifies the configuration and confirms the `bot_users` and `bot_commands` tables are reachable in Supabase.
+
+## Database Schema & Security
+
+The SQL in `supabase/schema.sql` creates all required tables (`bot_users`, `bot_commands`, `payments`, and `messages`) and enables row level security with policies that restrict access to the owning user or service role. Apply it to your project with:
+
+```
+supabase db execute --file supabase/schema.sql
+```
 
 ### Bot Commands Table
 
