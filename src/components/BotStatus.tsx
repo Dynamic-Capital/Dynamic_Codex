@@ -29,15 +29,25 @@ export function BotStatus() {
 
   const fetchMessageCount = async () => {
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured. Using default count.');
+        setMessageCount(0);
+        return;
+      }
+
       const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true });
       
       if (!error && count !== null) {
         setMessageCount(count);
+      } else {
+        setMessageCount(0);
       }
     } catch (error) {
       console.error('Failed to fetch message count:', error);
+      setMessageCount(0);
     }
   };
 

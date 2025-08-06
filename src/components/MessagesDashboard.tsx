@@ -32,6 +32,14 @@ export function MessagesDashboard() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
+      
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured. Using mock data.');
+        setMessages([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -42,6 +50,8 @@ export function MessagesDashboard() {
       setMessages(data || []);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
+      // Set empty messages array on error to prevent UI breaking
+      setMessages([]);
     } finally {
       setLoading(false);
     }
