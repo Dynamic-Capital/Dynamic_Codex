@@ -4,8 +4,8 @@ import { WebhookTester } from './components/WebhookTester';
 import { TelegramTester } from './components/TelegramTester';
 import { WebhookConfigurator } from './components/WebhookConfigurator';
 import { ThemeProvider } from './components/theme-provider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Toaster } from '@/components/ui/sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Toaster } from './components/ui/sonner';
 
 function App() {
   return (
