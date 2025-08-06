@@ -49,7 +49,7 @@ The edge function is located in `supabase/functions/telegram-webhook/`. It will 
 
 ### 6. Set Telegram Webhook
 
-After deployment, you can set your Telegram webhook URL using the Bot Setup tab in the dashboard, or manually:
+After deployment, you can set your Telegram webhook URL using the **Webhook Config** tab in the dashboard, or manually:
 
 ```bash
 curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc/setWebhook" \
@@ -57,6 +57,20 @@ curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc
 ```
 
 Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
+
+## 🔗 Your Webhook URL
+
+Your webhook URL will be in this format:
+```
+https://YOUR_PROJECT.supabase.co/functions/v1/telegram-webhook
+```
+
+Use the **Webhook Config** tab to:
+- ✅ See your exact webhook URL
+- ✅ Check current webhook status
+- ✅ Set webhook with one click
+- ✅ Test webhook endpoint
+- ✅ View webhook errors and diagnostics
 
 ## 🔧 Environment Variables to Set in Supabase
 
