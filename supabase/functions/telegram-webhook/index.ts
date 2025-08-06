@@ -16,6 +16,10 @@ interface TelegramMessage {
   };
   text?: string;
   date: number;
+  chat: {
+    id: number;
+    type: string;
+  };
 }
 
 interface TelegramUpdate {
@@ -24,61 +28,84 @@ interface TelegramUpdate {
 }
 
 Deno.serve(async (req: Request) => {
+  const startTime = Date.now();
+  console.log(`[${new Date().toISOString()}] === WEBHOOK START ===`);
+  console.log(`Method: ${req.method}, URL: ${req.url}`);
+  
   try {
-    console.log(`[${new Date().toISOString()}] Webhook called: ${req.method} ${req.url}`);
-    
+    // Handle CORS preflight
     if (req.method === "OPTIONS") {
-      console.log("CORS preflight request handled");
+      console.log("✅ CORS preflight request handled");
       return new Response(null, {
         status: 200,
         headers: corsHeaders,
       });
     }
 
+    // Only accept POST requests
     if (req.method !== "POST") {
-      console.log(`Method ${req.method} not allowed`);
-      return new Response("Method not allowed", { 
+      console.log(`❌ Method ${req.method} not allowed`);
+      return new Response(JSON.stringify({ error: "Method not allowed" }), { 
         status: 405,
-        headers: corsHeaders 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // Get environment variables
+    // Get and validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    const adminId = Deno.env.get("ADMIN_USER_ID");
+    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
+    const adminId = Deno.env.get("ADMIN_USER_ID") || "225513686";
 
-    console.log("Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey,
-      hasTelegramToken: !!telegramToken,
-      hasAdminId: !!adminId
-    });
+    console.log("🔧 Environment variables check:");
+    console.log(`- Supabase URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- Supabase Key: ${supabaseKey ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- Telegram Token: ${telegramToken ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- Admin ID: ${adminId ? '✅ Set' : '❌ Missing'}`);
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing Supabase configuration");
-      return new Response("Server configuration error", { 
+      console.error("❌ Missing critical Supabase configuration");
+      return new Response(JSON.stringify({ 
+        error: "Server configuration error",
+        details: "Missing Supabase credentials"
+      }), { 
         status: 500,
-        headers: corsHeaders 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
     // Parse the incoming update
-    const update: TelegramUpdate = await req.json();
-    console.log("Received update:", JSON.stringify(update, null, 2));
+    let update: TelegramUpdate;
+    try {
+      const body = await req.text();
+      console.log("📨 Raw request body:", body);
+      update = JSON.parse(body);
+      console.log("📋 Parsed update:", JSON.stringify(update, null, 2));
+    } catch (error) {
+      console.error("❌ Failed to parse request body:", error);
+      return new Response(JSON.stringify({ 
+        error: "Invalid JSON payload" 
+      }), { 
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
     
     const message = update.message;
 
     if (!message || !message.from) {
-      console.log("No message to process in update");
-      return new Response("No message to process", { 
+      console.log("⚠️ No message to process in update");
+      return new Response(JSON.stringify({ 
+        status: "ok", 
+        message: "No message to process" 
+      }), { 
         status: 200,
-        headers: corsHeaders 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
     // Initialize Supabase client
+    console.log("🔌 Initializing Supabase client...");
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Prepare message data
@@ -87,40 +114,102 @@ Deno.serve(async (req: Request) => {
     const date = new Date(message.date * 1000).toISOString();
     const display_name = username || `${first_name || ''} ${last_name || ''}`.trim() || `User ${user_id}`;
 
-    console.log("Processing message:", {
-      user_id,
-      display_name,
-      text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-      date
-    });
+    console.log("📝 Processing message:");
+    console.log(`- User ID: ${user_id}`);
+    console.log(`- Display Name: ${display_name}`);
+    console.log(`- Text: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
+    console.log(`- Date: ${date}`);
+    console.log(`- Chat ID: ${message.chat.id}`);
 
-    // Insert message into database
-    const { error: insertError } = await supabase
-      .from("messages")
-      .insert([{ 
-        user_id, 
-        username: display_name, 
-        text, 
-        date 
-      }]);
-
-    if (insertError) {
-      console.error("Supabase insert error:", insertError);
-      return new Response("Database error", { 
+    // Test database connection first
+    console.log("🔍 Testing database connection...");
+    try {
+      const { data: testData, error: testError } = await supabase
+        .from("messages")
+        .select("count")
+        .limit(1);
+      
+      if (testError) {
+        console.error("❌ Database connection test failed:", testError);
+        throw testError;
+      }
+      console.log("✅ Database connection successful");
+    } catch (error) {
+      console.error("❌ Database connection failed:", error);
+      return new Response(JSON.stringify({ 
+        error: "Database connection failed",
+        details: error.message
+      }), { 
         status: 500,
-        headers: corsHeaders 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    console.log("Message inserted successfully into database");
+    // Insert message into database
+    console.log("💾 Inserting message into database...");
+    const { data: insertData, error: insertError } = await supabase
+      .from("messages")
+      .insert([{ 
+        user_id: Number(user_id), 
+        username: display_name, 
+        text: text, 
+        date: date 
+      }])
+      .select();
 
-    // Forward message to admin if configured
-    if (telegramToken && adminId && text.trim()) {
-      const adminMessage = `📨 New message from ${display_name} (ID: ${user_id}):\n\n${text}`;
-      
-      console.log("Forwarding message to admin:", adminId);
-      
+    if (insertError) {
+      console.error("❌ Database insert error:", insertError);
+      return new Response(JSON.stringify({ 
+        error: "Database insert failed",
+        details: insertError.message
+      }), { 
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    console.log("✅ Message inserted successfully:", insertData);
+
+    // Send confirmation message back to user
+    if (telegramToken && text.trim()) {
+      console.log("📤 Sending confirmation to user...");
       try {
+        const confirmationMessage = `✅ Message received and stored!\n\nYour message: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`;
+        
+        const telegramResponse = await fetch(
+          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              chat_id: message.chat.id, 
+              text: confirmationMessage,
+              parse_mode: "HTML"
+            }),
+          }
+        );
+
+        if (!telegramResponse.ok) {
+          const errorText = await telegramResponse.text();
+          console.error("❌ Failed to send confirmation to user:", errorText);
+        } else {
+          console.log("✅ Confirmation sent to user successfully");
+        }
+      } catch (error) {
+        console.error("❌ Error sending confirmation to user:", error);
+      }
+    }
+
+    // Forward message to admin if configured and different from sender
+    if (telegramToken && adminId && text.trim() && user_id.toString() !== adminId) {
+      console.log("📨 Forwarding message to admin...");
+      try {
+        const adminMessage = `📨 <b>New message from ${display_name}</b>\n` +
+                           `👤 User ID: <code>${user_id}</code>\n` +
+                           `💬 Chat ID: <code>${message.chat.id}</code>\n` +
+                           `🕒 Time: ${new Date(message.date * 1000).toLocaleString()}\n\n` +
+                           `📝 Message:\n<blockquote>${text}</blockquote>`;
+        
         const telegramResponse = await fetch(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
@@ -136,26 +225,40 @@ Deno.serve(async (req: Request) => {
 
         if (!telegramResponse.ok) {
           const errorText = await telegramResponse.text();
-          console.error("Failed to send message to admin:", errorText);
+          console.error("❌ Failed to send message to admin:", errorText);
         } else {
-          console.log("Message forwarded to admin successfully");
+          console.log("✅ Message forwarded to admin successfully");
         }
       } catch (error) {
-        console.error("Error sending message to admin:", error);
+        console.error("❌ Error sending message to admin:", error);
       }
     }
 
-    console.log("Webhook processing completed successfully");
-    return new Response("OK", { 
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ Webhook processing completed successfully in ${processingTime}ms`);
+    console.log(`[${new Date().toISOString()}] === WEBHOOK END ===`);
+    
+    return new Response(JSON.stringify({ 
+      status: "ok",
+      message: "Message processed successfully",
+      processing_time_ms: processingTime
+    }), { 
       status: 200,
-      headers: corsHeaders 
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (error) {
-    console.error("Webhook error:", error);
-    return new Response("Internal server error", { 
+    const processingTime = Date.now() - startTime;
+    console.error("❌ Webhook error:", error);
+    console.log(`[${new Date().toISOString()}] === WEBHOOK ERROR END (${processingTime}ms) ===`);
+    
+    return new Response(JSON.stringify({ 
+      error: "Internal server error",
+      details: error.message,
+      processing_time_ms: processingTime
+    }), { 
       status: 500,
-      headers: corsHeaders 
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });

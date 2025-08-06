@@ -1,6 +1,7 @@
 import { MessagesDashboard } from '@/components/MessagesDashboard';
 import { BotSetup } from '@/components/BotSetup';
 import { WebhookTester } from '@/components/WebhookTester';
+import { TelegramTester } from '@/components/TelegramTester';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster } from '@/components/ui/sonner';
@@ -11,10 +12,11 @@ function App() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
           <Tabs defaultValue="dashboard" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="dashboard">Messages Dashboard</TabsTrigger>
               <TabsTrigger value="setup">Bot Setup</TabsTrigger>
               <TabsTrigger value="testing">System Health</TabsTrigger>
+              <TabsTrigger value="telegram">Telegram Test</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
               <MessagesDashboard />
@@ -24,6 +26,9 @@ function App() {
             </TabsContent>
             <TabsContent value="testing">
               <WebhookTester />
+            </TabsContent>
+            <TabsContent value="telegram">
+              <TelegramTester />
             </TabsContent>
           </Tabs>
         </div>
