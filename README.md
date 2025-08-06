@@ -58,6 +58,36 @@ curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc
 
 Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
 
+## 🔧 Environment Variables to Set in Supabase
+
+Make sure these are set in your Supabase Edge Function environment:
+- `TELEGRAM_BOT_TOKEN`: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
+- `ADMIN_USER_ID`: `225513686`
+
+## 🧪 Testing Your Bot
+
+Use the new "Telegram Test" tab to:
+- ✅ Validate your bot token and connection
+- ✅ Check webhook configuration status
+- ✅ Test database connectivity
+- ✅ Verify edge function deployment
+- ✅ Send test messages directly to your bot
+- ✅ Set webhook URL easily
+
+## 📱 How to Test
+
+1. **Go to "Telegram Test" tab**
+2. **Click "Run Full Test"** to check all connections
+3. **Send a test message** using the built-in sender
+4. **Check your Telegram bot** - you should receive the test message
+5. **Send a message to your bot** - it should appear in the dashboard
+
+Your bot is now fully configured and ready to receive messages! The enhanced webhook function will:
+- ✅ Store all messages in Supabase
+- ✅ Send confirmation back to users
+- ✅ Forward messages to admin
+- ✅ Provide detailed logging for debugging
+
 ## How It Works
 
 1. **Message Reception**: Users send messages to your Telegram bot
