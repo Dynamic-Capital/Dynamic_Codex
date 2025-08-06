@@ -31,10 +31,10 @@ For the edge function, you'll need to set these in your Supabase dashboard:
 
 ### 3. Create a Telegram Bot
 
-1. Message [@BotFather](https://t.me/botfather) on Telegram
-2. Send `/newbot` and follow the instructions
-3. Save the bot token you receive
-4. Get your Telegram user ID by messaging [@userinfobot](https://t.me/userinfobot)
+✅ **Bot Token**: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
+✅ **Admin User ID**: `225513686`
+
+Your bot is already configured! You can find it at: [@YourBotUsername](https://t.me/YourBotUsername)
 
 ### 4. Database Setup
 
@@ -49,16 +49,14 @@ The edge function is located in `supabase/functions/telegram-webhook/`. It will 
 
 ### 6. Set Telegram Webhook
 
-After deployment, set your Telegram webhook URL:
+After deployment, you can set your Telegram webhook URL using the Bot Setup tab in the dashboard, or manually:
 
 ```bash
-curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
+curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc/setWebhook" \
   -d url=https://<YOUR_SUPABASE_PROJECT>.supabase.co/functions/v1/telegram-webhook
 ```
 
-Replace:
-- `<YOUR_BOT_TOKEN>` with your actual bot token
-- `<YOUR_SUPABASE_PROJECT>` with your Supabase project reference
+Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
 
 ## How It Works
 
