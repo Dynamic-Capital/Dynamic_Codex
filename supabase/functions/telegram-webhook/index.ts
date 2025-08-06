@@ -104,6 +104,79 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Handle commands first
+    if (message.text && message.text.startsWith('/')) {
+      console.log(`🤖 Processing command: ${message.text}`);
+      
+      let responseText = "";
+      
+      switch (message.text.toLowerCase()) {
+        case '/start':
+          responseText = `🤖 Welcome to the Dynamic Pool Bot!\n\n` +
+                        `I'm here to help you manage your pool activities.\n\n` +
+                        `Available commands:\n` +
+                        `• /start - Show this welcome message\n` +
+                        `• /help - Get help information\n` +
+                        `• /status - Check bot status\n\n` +
+                        `Just send me any message and I'll store it for you!`;
+          break;
+        case '/help':
+          responseText = `🆘 Help Information\n\n` +
+                        `This bot stores all your messages and provides real-time monitoring.\n\n` +
+                        `Features:\n` +
+                        `• Message storage in database\n` +
+                        `• Real-time dashboard updates\n` +
+                        `• Admin notifications\n` +
+                        `• Message history tracking\n\n` +
+                        `Send any message to get started!`;
+          break;
+        case '/status':
+          responseText = `✅ Bot Status: Active\n\n` +
+                        `• Database: Connected\n` +
+                        `• Webhook: Working\n` +
+                        `• Real-time: Enabled\n` +
+                        `• Admin ID: ${adminId}\n\n` +
+                        `Everything is working perfectly!`;
+          break;
+        default:
+          responseText = `❓ Unknown command: ${message.text}\n\n` +
+                        `Available commands:\n` +
+                        `• /start - Welcome message\n` +
+                        `• /help - Help information\n` +
+                        `• /status - Bot status\n\n` +
+                        `Or just send me a regular message!`;
+      }
+      
+      // Send command response immediately
+      if (telegramToken && responseText) {
+        console.log("📤 Sending command response...");
+        try {
+          const telegramResponse = await fetch(
+            `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                chat_id: message.chat.id, 
+                text: responseText,
+                parse_mode: "HTML"
+              }),
+            }
+          );
+
+          if (!telegramResponse.ok) {
+            const errorText = await telegramResponse.text();
+            console.error("❌ Failed to send command response:", errorText);
+          } else {
+            console.log("✅ Command response sent successfully");
+          }
+        } catch (error) {
+          console.error("❌ Error sending command response:", error);
+        }
+      }
+      
+      // Still store the command in database for tracking
+    }
     // Initialize Supabase client
     console.log("🔌 Initializing Supabase client...");
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -170,8 +243,8 @@ Deno.serve(async (req: Request) => {
 
     console.log("✅ Message inserted successfully:", insertData);
 
-    // Send confirmation message back to user
-    if (telegramToken && text.trim()) {
+    // Send confirmation message back to user (only for non-commands)
+    if (telegramToken && text.trim() && !text.startsWith('/')) {
       console.log("📤 Sending confirmation to user...");
       try {
         const confirmationMessage = `✅ Message received and stored!\n\nYour message: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`;
@@ -200,8 +273,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Forward message to admin if configured and different from sender
-    if (telegramToken && adminId && text.trim() && user_id.toString() !== adminId) {
+    // Forward message to admin if configured and different from sender (skip commands)
+    if (telegramToken && adminId && text.trim() && user_id.toString() !== adminId && !text.startsWith('/')) {
       console.log("📨 Forwarding message to admin...");
       try {
         const adminMessage = `📨 <b>New message from ${display_name}</b>\n` +

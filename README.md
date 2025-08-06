@@ -96,8 +96,18 @@ Use the new "Telegram Test" tab to:
 4. **Check your Telegram bot** - you should receive the test message
 5. **Send a message to your bot** - it should appear in the dashboard
 
+## 🤖 Bot Commands
+
+Your bot now supports these commands:
+- `/start` - Welcome message and bot introduction
+- `/help` - Help information and features
+- `/status` - Check bot status and connection
+
+Commands are handled immediately and provide instant responses!
+
 Your bot is now fully configured and ready to receive messages! The enhanced webhook function will:
 - ✅ Store all messages in Supabase
+- ✅ Handle bot commands (/start, /help, /status)
 - ✅ Send confirmation back to users
 - ✅ Forward messages to admin
 - ✅ Provide detailed logging for debugging
