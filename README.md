@@ -31,10 +31,11 @@ For the edge function, you'll need to set these in your Supabase dashboard:
 
 ### 3. Create a Telegram Bot
 
+✅ **Bot Username**: `@Dynamic_Pool_BOT`
 ✅ **Bot Token**: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
 ✅ **Admin User ID**: `225513686`
 
-Your bot is already configured! You can find it at: [@YourBotUsername](https://t.me/YourBotUsername)
+Your bot is already configured! You can find it at: [@Dynamic_Pool_BOT](https://t.me/Dynamic_Pool_BOT)
 
 ### 4. Database Setup
 

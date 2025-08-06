@@ -10,7 +10,7 @@ export function BotStatus() {
   const [isOnline, setIsOnline] = useState<boolean>(false);
 
   const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
-  const botUsername = 'YourBotUsername'; // Replace with actual bot username
+  const botUsername = 'Dynamic_Pool_BOT';
 
   useEffect(() => {
     checkBotStatus();
