@@ -66,6 +66,18 @@ Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
 4. **Admin Notification**: Messages are forwarded to the configured admin user
 5. **Real-time Dashboard**: The web dashboard shows all messages in real-time
 
+## System Health Monitoring
+
+The dashboard includes a comprehensive health check system that verifies:
+- ✅ Supabase database connection and schema
+- ✅ Telegram bot token validation
+- ✅ Webhook configuration status
+- ✅ Edge function deployment and accessibility
+- ✅ Real-time subscription functionality
+- ✅ GitHub integration status
+
+Use the "System Health" tab to run diagnostics and troubleshoot any issues.
+
 ## Dashboard Features
 
 - **Real-time Updates**: New messages appear instantly without refresh
@@ -73,6 +85,8 @@ Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
 - **User Information**: See username and user ID for each message
 - **Timestamps**: Formatted message dates and times
 - **Responsive Design**: Works on desktop and mobile devices
+- **Health Monitoring**: Comprehensive system status checking
+- **Quick Actions**: Direct links to bot chat and admin panels
 
 ## Development
 

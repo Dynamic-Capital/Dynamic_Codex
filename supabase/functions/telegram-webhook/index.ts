@@ -25,7 +25,10 @@ interface TelegramUpdate {
 
 Deno.serve(async (req: Request) => {
   try {
+    console.log(`[${new Date().toISOString()}] Webhook called: ${req.method} ${req.url}`);
+    
     if (req.method === "OPTIONS") {
+      console.log("CORS preflight request handled");
       return new Response(null, {
         status: 200,
         headers: corsHeaders,
@@ -33,6 +36,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method !== "POST") {
+      console.log(`Method ${req.method} not allowed`);
       return new Response("Method not allowed", { 
         status: 405,
         headers: corsHeaders 
@@ -45,6 +49,13 @@ Deno.serve(async (req: Request) => {
     const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
     const adminId = Deno.env.get("ADMIN_USER_ID");
 
+    console.log("Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasTelegramToken: !!telegramToken,
+      hasAdminId: !!adminId
+    });
+
     if (!supabaseUrl || !supabaseKey) {
       console.error("Missing Supabase configuration");
       return new Response("Server configuration error", { 
@@ -55,9 +66,12 @@ Deno.serve(async (req: Request) => {
 
     // Parse the incoming update
     const update: TelegramUpdate = await req.json();
+    console.log("Received update:", JSON.stringify(update, null, 2));
+    
     const message = update.message;
 
     if (!message || !message.from) {
+      console.log("No message to process in update");
       return new Response("No message to process", { 
         status: 200,
         headers: corsHeaders 
@@ -72,6 +86,13 @@ Deno.serve(async (req: Request) => {
     const text = message.text || "";
     const date = new Date(message.date * 1000).toISOString();
     const display_name = username || `${first_name || ''} ${last_name || ''}`.trim() || `User ${user_id}`;
+
+    console.log("Processing message:", {
+      user_id,
+      display_name,
+      text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+      date
+    });
 
     // Insert message into database
     const { error: insertError } = await supabase
@@ -91,9 +112,13 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    console.log("Message inserted successfully into database");
+
     // Forward message to admin if configured
     if (telegramToken && adminId && text.trim()) {
       const adminMessage = `📨 New message from ${display_name} (ID: ${user_id}):\n\n${text}`;
+      
+      console.log("Forwarding message to admin:", adminId);
       
       try {
         const telegramResponse = await fetch(
@@ -110,13 +135,17 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!telegramResponse.ok) {
-          console.error("Failed to send message to admin:", await telegramResponse.text());
+          const errorText = await telegramResponse.text();
+          console.error("Failed to send message to admin:", errorText);
+        } else {
+          console.log("Message forwarded to admin successfully");
         }
       } catch (error) {
         console.error("Error sending message to admin:", error);
       }
     }
 
+    console.log("Webhook processing completed successfully");
     return new Response("OK", { 
       status: 200,
       headers: corsHeaders 
