@@ -8,6 +8,7 @@
 // Opens trades based on predicted direction and reports actions to Supabase via WebRequest.
 
 #include <Trade/Trade.mqh>
+#include "logger.mqh"
 CTrade trade;
 
 input int    NeighborsCount    = 8;     // number of neighbors to consider
@@ -63,6 +64,7 @@ int OnInit()
    ArrayResize(rows, MaxBarsBack);
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(Slippage);
+   LogVersion(VersionID);
    return(INIT_SUCCEEDED);
 }
 
@@ -167,7 +169,10 @@ void ManageTrades(int signal)
       double sl = (slPoints > 0) ? price - slPoints*_Point : 0.0;
       double tp = (tpPoints > 0) ? price + tpPoints*_Point : 0.0;
       if(trade.Buy(lot, NULL, 0.0, sl, tp))
+      {
+         Log("Buy order placed");
          SendReport("buy");
+      }
    }
    else if(signal < 0 && (!hasPosition || direction > 0))
    {
@@ -177,7 +182,10 @@ void ManageTrades(int signal)
       double sl = (slPoints > 0) ? price + slPoints*_Point : 0.0;
       double tp = (tpPoints > 0) ? price - tpPoints*_Point : 0.0;
       if(trade.Sell(lot, NULL, 0.0, sl, tp))
+      {
+         Log("Sell order placed");
          SendReport("sell");
+      }
    }
 }
 
