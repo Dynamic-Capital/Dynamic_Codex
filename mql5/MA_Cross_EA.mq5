@@ -46,7 +46,7 @@ void OnTick()
    }
 }
 
-void SendReport(string action)
+bool SendReport(string action)
 {
    string url = "https://xyz.supabase.co/functions/v1/ea-report"; // replace with your endpoint
    string json = StringFormat("{\"symbol\":\"%s\",\"action\":\"%s\",\"profit\":%f}",
@@ -56,12 +56,38 @@ void SendReport(string action)
 
    char result[];
    string headers = "Content-Type: application/json\r\n";
+   string resultHeaders;
    int timeout = 5000;
-   int res = WebRequest("POST", url, headers, timeout, post, result, NULL);
-   if(res == -1)
+   int status = WebRequest("POST", url, headers, timeout, post, result, resultHeaders);
+   string body = CharArrayToString(result);
+   if(status == -1)
+   {
       Print("WebRequest error: ", GetLastError());
-   else
-      Print("Report sent: ", json);
+      return false;
+   }
+
+   string message = "";
+   int pos = StringFind(body, "\"message\"");
+   if(pos != -1)
+   {
+      int start = StringFind(body, "\"", pos + 9);
+      if(start != -1)
+      {
+         start++;
+         int end = StringFind(body, "\"", start);
+         if(end != -1)
+            message = StringSubstr(body, start, end - start);
+      }
+   }
+
+   if(status < 200 || status >= 300)
+   {
+      PrintFormat("HTTP error %d: %s", status, body);
+      return false;
+   }
+
+   PrintFormat("Report sent [%d]: %s", status, message);
+   return true;
 }
 
 void OnDeinit(const int reason)
