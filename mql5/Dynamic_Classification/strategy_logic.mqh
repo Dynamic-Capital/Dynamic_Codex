@@ -12,11 +12,20 @@ double wtBuffer[];
 int    lastSignal=0;
 int    barsHeld=0;
 
-double GetFeature1(int shift){ return iRSI(_Symbol,PERIOD_CURRENT,F1_RSI_Period,PRICE_CLOSE,shift); }
+// indicator handles for bulk data retrieval
+int hF1=INVALID_HANDLE;
+int hF3=INVALID_HANDLE;
+int hF4=INVALID_HANDLE;
+int hF5=INVALID_HANDLE;
+int hEMA=INVALID_HANDLE;
+int hSMA=INVALID_HANDLE;
+int hAdxFilter=INVALID_HANDLE;
+
+double GetFeature1(int shift){ return (shift < ArraySize(f1Arr)) ? f1Arr[ArraySize(f1Arr)-1-shift] : 0; }
 double GetFeature2(int shift){ return (shift < ArraySize(wtBuffer)) ? wtBuffer[shift] : 0; }
-double GetFeature3(int shift){ return iCCI(_Symbol,PERIOD_CURRENT,F3_CCI_Period,PRICE_TYPICAL,shift); }
-double GetFeature4(int shift){ return iADX(_Symbol,PERIOD_CURRENT,F4_ADX_Period,PRICE_CLOSE,MODE_MAIN,shift); }
-double GetFeature5(int shift){ return iRSI(_Symbol,PERIOD_CURRENT,F5_RSI_Period,PRICE_CLOSE,shift); }
+double GetFeature3(int shift){ return (shift < ArraySize(f3Arr)) ? f3Arr[ArraySize(f3Arr)-1-shift] : 0; }
+double GetFeature4(int shift){ return (shift < ArraySize(f4Arr)) ? f4Arr[ArraySize(f4Arr)-1-shift] : 0; }
+double GetFeature5(int shift){ return (shift < ArraySize(f5Arr)) ? f5Arr[ArraySize(f5Arr)-1-shift] : 0; }
 
 void ComputeWaveTrend(int channelLen,int avgLen)
 {
@@ -45,16 +54,24 @@ void BuildTrainingSets()
    ArrayResize(f4Arr,total);
    ArrayResize(f5Arr,total);
    ArrayResize(labelArr,total);
-   for(int i=total-1;i>=0;i--)
+
+   // pull indicator data in bulk for efficiency
+   double buf1[],buf3[],buf4[],buf5[];
+   CopyBuffer(hF1,0,0,total,buf1);
+   CopyBuffer(hF3,0,0,total,buf3);
+   CopyBuffer(hF4,0,0,total,buf4);
+   CopyBuffer(hF5,0,0,total,buf5);
+
+   for(int idx=0;idx<total;idx++)
    {
-      int idx=total-1-i;
-      f1Arr[idx]=GetFeature1(i);
-      f2Arr[idx]=GetFeature2(i);
-      f3Arr[idx]=GetFeature3(i);
-      f4Arr[idx]=GetFeature4(i);
-      f5Arr[idx]=GetFeature5(i);
-      double future=Close[i+4];
-      double current=Close[i];
+      int shift=total-1-idx;
+      f1Arr[idx]=buf1[shift];
+      f2Arr[idx]=GetFeature2(shift);
+      f3Arr[idx]=buf3[shift];
+      f4Arr[idx]=buf4[shift];
+      f5Arr[idx]=buf5[shift];
+      double future=Close[shift+4];
+      double current=Close[shift];
       if(future>current) labelArr[idx]=1;
       else if(future<current) labelArr[idx]=-1;
       else labelArr[idx]=0;
@@ -100,19 +117,41 @@ double GaussianEstimate(int shift,int h)
 
 void InitStrategy()
 {
+   // create indicator handles once
+   hF1=iRSI(_Symbol,PERIOD_CURRENT,F1_RSI_Period,PRICE_CLOSE);
+   hF3=iCCI(_Symbol,PERIOD_CURRENT,F3_CCI_Period,PRICE_TYPICAL);
+   hF4=iADX(_Symbol,PERIOD_CURRENT,F4_ADX_Period);
+   hF5=iRSI(_Symbol,PERIOD_CURRENT,F5_RSI_Period,PRICE_CLOSE);
+   if(UseEmaFilter) hEMA=iMA(_Symbol,PERIOD_CURRENT,EmaPeriod,0,MODE_EMA,PRICE_CLOSE);
+   if(UseSmaFilter) hSMA=iMA(_Symbol,PERIOD_CURRENT,SmaPeriod,0,MODE_SMA,PRICE_CLOSE);
+   hAdxFilter=iADX(_Symbol,PERIOD_CURRENT,14);
+
    ComputeWaveTrend(F2_WT_Channel,F2_WT_Avg);
    BuildTrainingSets();
    lastSignal=0;
    barsHeld=0;
 }
 
+void DeinitStrategy()
+{
+   if(hF1!=INVALID_HANDLE) IndicatorRelease(hF1);
+   if(hF3!=INVALID_HANDLE) IndicatorRelease(hF3);
+   if(hF4!=INVALID_HANDLE) IndicatorRelease(hF4);
+   if(hF5!=INVALID_HANDLE) IndicatorRelease(hF5);
+   if(hEMA!=INVALID_HANDLE) IndicatorRelease(hEMA);
+   if(hSMA!=INVALID_HANDLE) IndicatorRelease(hSMA);
+    if(hAdxFilter!=INVALID_HANDLE) IndicatorRelease(hAdxFilter);
+}
+
 int EvaluateAction()
 {
-   double c1=GetFeature1(0);
+   // grab latest feature values from buffers
+   double val[1];
+   CopyBuffer(hF1,0,0,1,val); double c1=val[0];
    double c2=GetFeature2(0);
-   double c3=GetFeature3(0);
-   double c4=GetFeature4(0);
-   double c5=GetFeature5(0);
+   CopyBuffer(hF3,0,0,1,val); double c3=val[0];
+   CopyBuffer(hF4,0,0,1,val); double c4=val[0];
+   CopyBuffer(hF5,0,0,1,val); double c5=val[0];
 
    int total=ArraySize(labelArr);
    int k=NeighborsCount;
@@ -127,11 +166,15 @@ int EvaluateAction()
    }
    int prediction=0; for(int j=0;j<k;j++) prediction+=bestLabel[j];
 
-   bool adxFilter=!UseAdxFilter || iADX(_Symbol,PERIOD_CURRENT,14,PRICE_CLOSE,MODE_MAIN,0) > AdxThreshold;
-   bool emaUp=!UseEmaFilter || Close[0] > iMA(_Symbol,PERIOD_CURRENT,EmaPeriod,0,MODE_EMA,PRICE_CLOSE,0);
-   bool emaDown=!UseEmaFilter || Close[0] < iMA(_Symbol,PERIOD_CURRENT,EmaPeriod,0,MODE_EMA,PRICE_CLOSE,0);
-   bool smaUp=!UseSmaFilter || Close[0] > iMA(_Symbol,PERIOD_CURRENT,SmaPeriod,0,MODE_SMA,PRICE_CLOSE,0);
-   bool smaDown=!UseSmaFilter || Close[0] < iMA(_Symbol,PERIOD_CURRENT,SmaPeriod,0,MODE_SMA,PRICE_CLOSE,0);
+   // filter data via cached handles
+   CopyBuffer(hAdxFilter,0,0,1,val); bool adxFilter=!UseAdxFilter || val[0] > AdxThreshold;
+   double emaVal=0,smaVal=0;
+   if(UseEmaFilter){ CopyBuffer(hEMA,0,0,1,val); emaVal=val[0]; }
+   if(UseSmaFilter){ CopyBuffer(hSMA,0,0,1,val); smaVal=val[0]; }
+   bool emaUp=!UseEmaFilter || Close[0] > emaVal;
+   bool emaDown=!UseEmaFilter || Close[0] < emaVal;
+   bool smaUp=!UseSmaFilter || Close[0] > smaVal;
+   bool smaDown=!UseSmaFilter || Close[0] < smaVal;
 
    double yhat1=RationalQuadratic(0);
    double yhat1_p1=RationalQuadratic(1);
