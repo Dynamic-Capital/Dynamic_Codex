@@ -44,9 +44,11 @@ The database migration will be automatically applied when you connect to Supabas
 - Row Level Security (RLS) policies
 - Real-time subscriptions enabled
 
-### 5. Deploy the Edge Function
+### 5. Deploy Edge Functions
 
-The edge function is located in `supabase/functions/telegram-webhook/`. It will be automatically deployed when you connect to Supabase.
+The Telegram webhook function lives in `supabase/functions/telegram-webhook/`.
+An additional `ea-report` function under `supabase/functions/ea-report/` accepts JSON performance reports from your MQL5 Expert Advisor, stores them in the `ea_reports` table, and forwards a summary to Telegram.
+Both functions are automatically deployed when you connect to Supabase.
 
 ### 6. Set Telegram Webhook
 
