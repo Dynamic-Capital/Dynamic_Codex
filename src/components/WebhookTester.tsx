@@ -30,7 +30,6 @@ export function WebhookTester() {
   const [results, setResults] = useState<TestResult[]>([]);
 
   const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
-  const adminUserId = '225513686';
 
   const updateResult = (name: string, status: TestResult['status'], message: string, details?: string) => {
     setResults(prev => {
@@ -52,7 +51,7 @@ export function WebhookTester() {
     // Test 1: Supabase Connection
     updateResult('Supabase Connection', 'pending', 'Testing database connection...');
     try {
-      const { data, error } = await supabase.from('messages').select('count').limit(1);
+      const { error } = await supabase.from('messages').select('count').limit(1);
       if (error) throw error;
       updateResult('Supabase Connection', 'success', 'Database connection successful', 
         `Connected to Supabase. Table accessible.`);
@@ -131,11 +130,11 @@ export function WebhookTester() {
     // Test 5: Database Schema
     updateResult('Database Schema', 'pending', 'Verifying database schema...');
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .select('id, user_id, username, text, date, created_at')
         .limit(1);
-      
+
       if (error) throw error;
       updateResult('Database Schema', 'success', 'Database schema is correct', 
         'All required columns are present and accessible');
@@ -149,8 +148,8 @@ export function WebhookTester() {
     try {
       const channel = supabase.channel('test-channel');
       
-      const subscription = channel
-        .on('postgres_changes', 
+      channel
+        .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages' },
           () => {}
         )

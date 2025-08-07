@@ -44,7 +44,7 @@ export function BotSetup() {
         setWebhookStatus('error');
         toast.error(`Failed to set webhook: ${result.description}`);
       }
-    } catch (error) {
+    } catch {
       setWebhookStatus('error');
       toast.error('Failed to set webhook. Check your connection.');
     } finally {
@@ -62,7 +62,7 @@ export function BotSetup() {
       } else {
         toast.error('Bot token is invalid');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to test bot connection');
     }
   };

@@ -22,7 +22,7 @@ export function BotStatus() {
       const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
       const result = await response.json();
       setIsOnline(result.ok);
-    } catch (error) {
+    } catch {
       setIsOnline(false);
     }
   };

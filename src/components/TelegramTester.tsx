@@ -4,7 +4,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
-import { Alert, AlertDescription } from './ui/alert';
 import { Separator } from './ui/separator';
 import { 
   CheckCircle, 
@@ -66,7 +65,7 @@ export function TelegramTester() {
         updateResult('Bot Token', 'error', 'Invalid bot token', result.description);
       }
     } catch (error) {
-      updateResult('Bot Token', 'error', 'Failed to validate bot token', 
+      updateResult('Bot Token', 'error', 'Failed to validate bot token',
         error instanceof Error ? error.message : 'Network error');
     }
 
@@ -97,7 +96,7 @@ export function TelegramTester() {
     // Test 3: Database Connection
     updateResult('Database Connection', 'pending', 'Testing Supabase connection...');
     try {
-      const { data, error } = await supabase.from('messages').select('count').limit(1);
+      const { error } = await supabase.from('messages').select('count').limit(1);
       if (error) throw error;
       updateResult('Database Connection', 'success', 'Database connection successful', 
         'Supabase connection and messages table accessible');
@@ -182,7 +181,7 @@ export function TelegramTester() {
       } else {
         toast.error(`Failed to set webhook: ${result.description}`);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to set webhook. Check your connection.');
     }
   };

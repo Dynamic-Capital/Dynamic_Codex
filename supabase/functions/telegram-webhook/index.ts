@@ -197,11 +197,11 @@ Deno.serve(async (req: Request) => {
     // Test database connection first
     console.log("🔍 Testing database connection...");
     try {
-      const { data: testData, error: testError } = await supabase
+      const { error: testError } = await supabase
         .from("messages")
         .select("count")
         .limit(1);
-      
+
       if (testError) {
         console.error("❌ Database connection test failed:", testError);
         throw testError;
@@ -209,10 +209,10 @@ Deno.serve(async (req: Request) => {
       console.log("✅ Database connection successful");
     } catch (error) {
       console.error("❌ Database connection failed:", error);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: "Database connection failed",
         details: error.message
-      }), { 
+      }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });

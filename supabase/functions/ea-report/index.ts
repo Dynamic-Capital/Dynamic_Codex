@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
   let payload: Record<string, unknown>;
   try {
     payload = await req.json();
-  } catch (_e) {
+  } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
           parse_mode: "HTML",
         }),
       });
-    } catch (_e) {
+    } catch {
       /* ignore telegram errors */
     }
   }
