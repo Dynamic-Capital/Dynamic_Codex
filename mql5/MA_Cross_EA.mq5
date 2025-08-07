@@ -14,16 +14,23 @@ CTrade trade;
 
 int fastHandle;
 int slowHandle;
+datetime lastBarTime = 0;
 
 int OnInit()
 {
    fastHandle = iMA(_Symbol, PERIOD_CURRENT, FastMA, 0, MODE_EMA, PRICE_CLOSE);
    slowHandle = iMA(_Symbol, PERIOD_CURRENT, SlowMA, 0, MODE_EMA, PRICE_CLOSE);
+   if(fastHandle==INVALID_HANDLE || slowHandle==INVALID_HANDLE)
+      return INIT_FAILED;
    return INIT_SUCCEEDED;
 }
 
 void OnTick()
 {
+   datetime barTime = iTime(_Symbol, PERIOD_CURRENT, 0);
+   if(barTime == lastBarTime) return;
+   lastBarTime = barTime;
+
    double fast[2];
    double slow[2];
    if(CopyBuffer(fastHandle,0,0,2,fast) <= 0) return;
