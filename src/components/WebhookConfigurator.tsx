@@ -23,7 +23,7 @@ export function WebhookConfigurator() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [isSettingWebhook, setIsSettingWebhook] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [currentWebhookInfo, setCurrentWebhookInfo] = useState<any>(null);
+  const [currentWebhookInfo, setCurrentWebhookInfo] = useState<Record<string, unknown> | null>(null);
   const [isCheckingWebhook, setIsCheckingWebhook] = useState(false);
 
   const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
@@ -57,7 +57,7 @@ export function WebhookConfigurator() {
       } else {
         toast.error('Failed to get webhook info');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to check webhook status');
     } finally {
       setIsCheckingWebhook(false);
@@ -89,7 +89,7 @@ export function WebhookConfigurator() {
         setWebhookStatus('error');
         toast.error(`Failed to set webhook: ${result.description}`);
       }
-    } catch (error) {
+    } catch {
       setWebhookStatus('error');
       toast.error('Failed to set webhook. Check your connection.');
     } finally {
@@ -113,7 +113,7 @@ export function WebhookConfigurator() {
       } else {
         toast.error(`Failed to delete webhook: ${result.description}`);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete webhook');
     } finally {
       setIsSettingWebhook(false);
@@ -137,7 +137,7 @@ export function WebhookConfigurator() {
       } else {
         toast.warning(`Webhook endpoint responded with status: ${response.status}`);
       }
-    } catch (error) {
+    } catch {
       toast.error('Webhook endpoint is not accessible');
     }
   };

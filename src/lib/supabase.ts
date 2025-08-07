@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create a mock client if environment variables are missing
-let supabase: any;
+let supabase: SupabaseClient;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Missing Supabase environment variables. Using mock client.');
@@ -18,7 +18,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
       subscribe: () => {},
       unsubscribe: () => {},
     }),
-  };
+  } as unknown as SupabaseClient;
 } else {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 }
