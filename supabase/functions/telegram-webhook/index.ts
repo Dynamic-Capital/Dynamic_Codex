@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] === WEBHOOK START ===`);
   console.log(`Method: ${req.method}, URL: ${req.url}`);
-  
+
   try {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -42,10 +42,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const { pathname } = new URL(req.url);
+    // Health check endpoint
+    if (req.method === "GET" && pathname === "/ping") {
+      return new Response(JSON.stringify({ pong: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Only accept POST requests
     if (req.method !== "POST") {
       console.log(`❌ Method ${req.method} not allowed`);
-      return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -211,7 +220,7 @@ Deno.serve(async (req: Request) => {
       console.error("❌ Database connection failed:", error);
       return new Response(JSON.stringify({
         error: "Database connection failed",
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -325,11 +334,11 @@ Deno.serve(async (req: Request) => {
     console.error("❌ Webhook error:", error);
     console.log(`[${new Date().toISOString()}] === WEBHOOK ERROR END (${processingTime}ms) ===`);
     
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: "Internal server error",
-      details: error.message,
+      details: error instanceof Error ? error.message : String(error),
       processing_time_ms: processingTime
-    }), { 
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
