@@ -32,8 +32,8 @@ For the edge function, you'll need to set these in your Supabase dashboard:
 ### 3. Create a Telegram Bot
 
 ✅ **Bot Username**: `@Dynamic_Pool_BOT`
-✅ **Bot Token**: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
-✅ **Admin User ID**: `225513686`
+✅ **Bot Token**: `<TELEGRAM_BOT_TOKEN>`
+✅ **Admin User ID**: `<ADMIN_USER_ID>`
 
 Your bot is already configured! You can find it at: [@Dynamic_Pool_BOT](https://t.me/Dynamic_Pool_BOT)
 
@@ -55,8 +55,8 @@ Both functions are automatically deployed when you connect to Supabase.
 After deployment, you can set your Telegram webhook URL using the **Webhook Config** tab in the dashboard, or manually:
 
 ```bash
-curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc/setWebhook" \
-  -d url=https://<YOUR_SUPABASE_PROJECT>.supabase.co/functions/v1/telegram-webhook
+curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+  -d url="$SUPABASE_URL/functions/v1/telegram-webhook"
 ```
 
 Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
@@ -78,8 +78,8 @@ Use the **Webhook Config** tab to:
 ## 🔧 Environment Variables to Set in Supabase
 
 Make sure these are set in your Supabase Edge Function environment:
-- `TELEGRAM_BOT_TOKEN`: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
-- `ADMIN_USER_ID`: `225513686`
+- `TELEGRAM_BOT_TOKEN`: `<set in Supabase>`
+- `ADMIN_USER_ID`: `<set in Supabase>`
 
 ## 🧪 Testing Your Bot
 
@@ -180,3 +180,97 @@ npm run dev
 │   └── App.tsx                       # Main application
 └── README.md                         # This file
 ```
+
+## Edit policy
+
+✅ Edit these
+
+Mini App UI/copy: /apps/webapp/**
+
+Bot copy & plan prices: via Config Hub (/config set ...)
+
+New migrations: add new files only (e.g., 013_*.sql)
+
+Handlers: extend non-breaking behavior; keep signatures stable
+
+Scripts/workflows: append missing; avoid duplicates
+
+❌ Don’t do this
+
+Commit secrets/tokens
+
+Change or delete applied migrations
+
+Hardcode business values (prices, chat IDs, copy)
+
+Create duplicate functions/workflows/scripts
+
+Push to default branch when CI is red
+
+## Config Hub (live editing)
+
+Values live in app_config and are cached by the bot (TTL 60s). Common keys: welcome_copy, help_copy, vip_chat_id, plans, links, flags.
+
+From Telegram (admin only):
+
+```bash
+/config
+/config get welcome_copy
+/config set welcome_copy "Welcome to Dynamic Capital..."
+/config reload
+```
+
+## Environments & secrets (names only)
+
+Core: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TELEGRAM_BOT_TOKEN, ADMIN_USER_ID, VIP_CHAT_ID, WEBAPP_URL
+
+Crypto: BSC_RPC_URL, TRON_API_URL, USDT_BSC_CONTRACT, USDT_TRON_CONTRACT, MIN_CONF_BSC, MIN_CONF_TRON
+
+Bank: BANK_CURRENCY, BANK_REF_PREFIX, BANK_ACCOUNT_NAME?, BANK_ACCOUNT_NUMBER?, BANK_IMPORT_SIGNATURE_SECRET, EMAIL_INBOUND_SECRET?
+
+ChatOps/CI (opt): GITHUB_REPOSITORY, GITHUB_TOKEN, SUPABASE_ACCESS_TOKEN?, CHATOPS_SIGNING_SECRET?
+
+Use Codex Env panel, GitHub Secrets, and Supabase Functions → Secrets. Never commit values.
+
+## Dev scripts
+
+```bash
+npm run verify:functions   # functions + webhook + webapp + RPC
+npm run check:connect      # connectivity matrix
+npm run check:certs        # TLS audit (uses OCR_ENDPOINTS if set)
+npm run webapp:build && npm run webapp:upload
+supabase functions deploy telegram-webhook bank-inbox crypto-watcher admin-tools
+```
+
+## CI/CD
+
+CI: .github/workflows/ci.yml (verification on PRs)
+
+Deploy: .github/workflows/deploy.yml (default-branch push or manual)
+
+ChatOps (opt): @Dynamic_CODEX_BOT → /deploy staging|prod, /health, /status (admin only)
+
+## Accident playbook
+
+Webhook reset
+
+```bash
+curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+  -d url="$SUPABASE_URL/functions/v1/telegram-webhook"
+```
+
+Bad deploy: revert last good commit in GitHub → rerun Deploy workflow
+
+Secret leak: rotate in BotFather / Supabase / GitHub → update secrets → redeploy
+
+## Contributing (even if it's just me)
+
+Branch: feat/<short>, chore/<short>, ci/<short>, docs/<short>
+
+Commits: Conventional Commits
+
+PR to default branch; CI must be green; run npm run verify:functions locally before merge
+
+## License
+
+Personal project. All rights reserved unless otherwise noted.
