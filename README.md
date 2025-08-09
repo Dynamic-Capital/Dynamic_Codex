@@ -1,3 +1,82 @@
+<!-- BEGIN DOCS:SECTION:overview -->
+# Telegram Dynamic Pool Bot • Personal Project
+
+A Telegram bot + Mini App (WebApp) running on **Supabase Edge Functions** with a **central config hub** in Postgres. Payments via **bank transfer** and **crypto (USDT TRON/BSC)** with auto-verification. Real-time dashboard, health checks, and ChatOps.
+
+> **Maintainer:** <your name>  
+> **Primary bot:** @Dynamic_CODEX_BOT  
+> **Environment:** Supabase (functions+DB+storage), GitHub CI/CD, Codex for coding
+<!-- END DOCS:SECTION:overview -->
+
+<!-- BEGIN DOCS:SECTION:whats-in-here -->
+## What’s in here
+- Edge functions: `telegram-webhook`, `bank-inbox`, `crypto-watcher`, `admin-tools`, (`ea-report` optional)
+- Mini App: `/apps/webapp` (Vite + TS)
+- Core packages: `packages/core|bank|crypto|telegram`
+- Infra scripts: verify, secrets, connectivity, cert checks
+- Config Hub in DB: `app_config` (live-edit, no redeploy)
+<!-- END DOCS:SECTION:whats-in-here -->
+
+<!-- BEGIN DOCS:SECTION:quick-start -->
+## Quick start
+```bash
+git fetch --all --prune
+git checkout $(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+git pull --rebase
+node -v && deno --version && npx supabase@latest --version
+npm run check:secrets || true
+npm run verify:functions || true
+npm run check:connect || true
+```
+<!-- END DOCS:SECTION:quick-start -->
+
+<!-- BEGIN DOCS:SECTION:edit-policy -->
+## Edit policy
+✅ **Editable:** edge functions under `supabase/functions/`, packages, `/apps/webapp`, docs, and config files.
+❌ **Do not edit:** applied migrations in `supabase/migrations`, generated files, committed secrets, or historical tags.
+<!-- END DOCS:SECTION:edit-policy -->
+
+<!-- BEGIN DOCS:SECTION:config-hub -->
+## Config Hub
+Live settings live in the `app_config` table. Update via the Mini App’s `/config` tab or SQL: changes apply instantly without redeploys.
+<!-- END DOCS:SECTION:config-hub -->
+
+<!-- BEGIN DOCS:SECTION:envs -->
+## Environments & secrets
+Names only—set these in Supabase or GitHub:
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `ADMIN_USER_ID`, `VIP_CHAT_ID`, `WEBAPP_URL`, `BSC_RPC_URL`, `TRON_API_URL`, `USDT_BSC_CONTRACT`, `USDT_TRON_CONTRACT`, `MIN_CONF_BSC`, `MIN_CONF_TRON`, `BANK_CURRENCY`, `BANK_REF_PREFIX`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_IMPORT_SIGNATURE_SECRET`, `OCR_ENDPOINTS`.
+<!-- END DOCS:SECTION:envs -->
+
+<!-- BEGIN DOCS:SECTION:dev-scripts -->
+## Dev scripts you'll use
+- `npm run check:secrets` – confirm required secrets
+- `npm run verify:functions` – unit checks for edge functions
+- `npm run check:connect` – connectivity tests
+- `npm run deploy:webapp` – build & ship the Mini App
+<!-- END DOCS:SECTION:dev-scripts -->
+
+<!-- BEGIN DOCS:SECTION:ci-cd -->
+## CI/CD summary
+`ci.yml` runs lint and verify scripts. `deploy.yml` ships functions and the Mini App. ChatOps commands like `/deploy` are handled by @Dynamic_CODEX_BOT.
+<!-- END DOCS:SECTION:ci-cd -->
+
+<!-- BEGIN DOCS:SECTION:accident-playbook -->
+## Accident playbook
+- **Webhook reset:** `curl https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/deleteWebhook`
+- **Bad deploy rollback:** `git revert <sha>` then trigger `/deploy`
+- **Secret leak:** rotate in Supabase, update GitHub secrets, notify @Dynamic_Capital_Admin & @DynamicCapital_Support
+<!-- END DOCS:SECTION:accident-playbook -->
+
+<!-- BEGIN DOCS:SECTION:contributing -->
+## Contributing
+Create branches like `feat/`, `chore/`, or `docs/`. Use semantic commits and open PRs against the main branch with test results.
+<!-- END DOCS:SECTION:contributing -->
+
+<!-- BEGIN DOCS:SECTION:license -->
+## License
+Personal project — all rights reserved.
+<!-- END DOCS:SECTION:license -->
+
 # Telegram Dynamic Pool Bot
 
 A complete Telegram bot implementation with Supabase backend for message storage and real-time dashboard monitoring.
