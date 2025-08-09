@@ -1,0 +1,14 @@
+// BEGIN RENOVATE
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "schedule": ["after 9am on monday"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ],
+  "ignorePaths": ["supabase/functions/**"]
+}
+// END RENOVATE

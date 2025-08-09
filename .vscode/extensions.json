@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "denoland.vscode-deno",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bierner.markdown-mermaid",
+    "eamodio.gitlens",
+    "EditorConfig.EditorConfig",
+    "github.vscode-github-actions",
+    "rangav.vscode-thunder-client",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}

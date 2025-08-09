@@ -20,10 +20,12 @@ First, connect to Supabase by clicking the "Connect to Supabase" button in the t
 ### 2. Environment Variables
 
 The following environment variables are automatically configured when you connect to Supabase:
+
 - `VITE_SUPABASE_URL` - Your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
 
 For the edge function, you'll need to set these in your Supabase dashboard:
+
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
@@ -40,6 +42,7 @@ Your bot is already configured! You can find it at: [@Dynamic_Pool_BOT](https://
 ### 4. Database Setup
 
 The database migration will be automatically applied when you connect to Supabase. It creates:
+
 - `messages` table with proper structure
 - Row Level Security (RLS) policies
 - Real-time subscriptions enabled
@@ -64,11 +67,13 @@ Replace `<YOUR_SUPABASE_PROJECT>` with your actual Supabase project reference.
 ## 🔗 Your Webhook URL
 
 Your webhook URL will be in this format:
+
 ```
 https://YOUR_PROJECT.supabase.co/functions/v1/telegram-webhook
 ```
 
 Use the **Webhook Config** tab to:
+
 - ✅ See your exact webhook URL
 - ✅ Check current webhook status
 - ✅ Set webhook with one click
@@ -78,12 +83,14 @@ Use the **Webhook Config** tab to:
 ## 🔧 Environment Variables to Set in Supabase
 
 Make sure these are set in your Supabase Edge Function environment:
+
 - `TELEGRAM_BOT_TOKEN`: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
 - `ADMIN_USER_ID`: `225513686`
 
 ## 🧪 Testing Your Bot
 
 Use the new "Telegram Test" tab to:
+
 - ✅ Validate your bot token and connection
 - ✅ Check webhook configuration status
 - ✅ Test database connectivity
@@ -102,6 +109,7 @@ Use the new "Telegram Test" tab to:
 ## 🤖 Bot Commands
 
 Your bot now supports these commands:
+
 - `/start` - Welcome message and bot introduction
 - `/help` - Help information and features
 - `/status` - Check bot status and connection
@@ -109,6 +117,7 @@ Your bot now supports these commands:
 Commands are handled immediately and provide instant responses!
 
 Your bot is now fully configured and ready to receive messages! The enhanced webhook function will:
+
 - ✅ Store all messages in Supabase
 - ✅ Handle bot commands (/start, /help, /status)
 - ✅ Send confirmation back to users
@@ -126,6 +135,7 @@ Your bot is now fully configured and ready to receive messages! The enhanced web
 ## System Health Monitoring
 
 The dashboard includes a comprehensive health check system that verifies:
+
 - ✅ Supabase database connection and schema
 - ✅ Telegram bot token validation
 - ✅ Webhook configuration status
@@ -153,6 +163,10 @@ To run the dashboard locally:
 npm install
 npm run dev
 ```
+
+### Linting & Formatting
+
+Run `npm run deno:lint` for edge functions and `npm run lint` for the web app. Format with `npm run fmt`.
 
 ## Security
 

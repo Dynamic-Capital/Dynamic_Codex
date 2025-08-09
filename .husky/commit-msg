@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# BEGIN HUSKY-COMMIT-MSG
+npx commitlint --edit "$1"
+# END HUSKY-COMMIT-MSG
