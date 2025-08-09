@@ -8,7 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify:functions": "tsx ./infra/scripts/verify-all.ts",
+    "webapp:build": "npm --prefix ./apps/webapp run build",
+    "webapp:upload": "tsx ./infra/scripts/upload-webapp.ts",
+    "deploy:functions": "supabase functions deploy telegram-webhook bank-inbox crypto-watcher admin-tools"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
