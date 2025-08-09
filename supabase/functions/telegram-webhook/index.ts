@@ -1,4 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.53.0';
+import { get as getConfig, fetchConfig, invalidateConfig } from '../../../packages/core/config.ts';
+async function hmac(body: string, secret: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(body));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,8 +62,8 @@ Deno.serve(async (req: Request) => {
     // Get and validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
-    const adminId = Deno.env.get("ADMIN_USER_ID") || "225513686";
+    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const adminId = Deno.env.get("ADMIN_USER_ID");
 
     console.log("🔧 Environment variables check:");
     console.log(`- Supabase URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}`);
@@ -108,44 +116,69 @@ Deno.serve(async (req: Request) => {
     if (message.text && message.text.startsWith('/')) {
       console.log(`🤖 Processing command: ${message.text}`);
       
-      let responseText = "";
-      
-      switch (message.text.toLowerCase()) {
-        case '/start':
-          responseText = `🤖 Welcome to the Dynamic Pool Bot!\n\n` +
-                        `I'm here to help you manage your pool activities.\n\n` +
-                        `Available commands:\n` +
-                        `• /start - Show this welcome message\n` +
-                        `• /help - Get help information\n` +
-                        `• /status - Check bot status\n\n` +
-                        `Just send me any message and I'll store it for you!`;
-          break;
-        case '/help':
-          responseText = `🆘 Help Information\n\n` +
-                        `This bot stores all your messages and provides real-time monitoring.\n\n` +
-                        `Features:\n` +
-                        `• Message storage in database\n` +
-                        `• Real-time dashboard updates\n` +
-                        `• Admin notifications\n` +
-                        `• Message history tracking\n\n` +
-                        `Send any message to get started!`;
-          break;
-        case '/status':
-          responseText = `✅ Bot Status: Active\n\n` +
-                        `• Database: Connected\n` +
-                        `• Webhook: Working\n` +
-                        `• Real-time: Enabled\n` +
-                        `• Admin ID: ${adminId}\n\n` +
-                        `Everything is working perfectly!`;
-          break;
-        default:
-          responseText = `❓ Unknown command: ${message.text}\n\n` +
-                        `Available commands:\n` +
-                        `• /start - Welcome message\n` +
-                        `• /help - Help information\n` +
-                        `• /status - Bot status\n\n` +
-                        `Or just send me a regular message!`;
-      }
+        const [command, ...args] = message.text.split(' ');
+        let responseText = "";
+
+        switch (command.toLowerCase()) {
+          case '/start':
+            responseText = await getConfig<string>('welcome_copy', `🤖 Welcome to the Dynamic Pool Bot!`);
+            break;
+          case '/help':
+            responseText = await getConfig<string>('help_copy', `Send /start to begin.`);
+            break;
+          case '/config':
+            if (message.from.id.toString() !== adminId) {
+              responseText = 'Unauthorized';
+              break;
+            }
+            const sub = args[0];
+            if (!sub || sub === 'list') {
+              const cfg = await fetchConfig();
+              responseText = Object.keys(cfg.data).join(', ');
+              break;
+            }
+            if (sub === 'get') {
+              const key = args[1];
+              const val = await getConfig(key);
+              responseText = val !== undefined ? JSON.stringify(val) : 'Not found';
+              break;
+            }
+            if (sub === 'set') {
+              const key = args[1];
+              const raw = args.slice(2).join(' ');
+              let value: unknown = raw;
+              try { value = JSON.parse(raw); } catch (_) {}
+              const secret = Deno.env.get('CHATOPS_SIGNING_SECRET') || '';
+              const body = JSON.stringify({ key, value });
+              const sign = await hmac(body, secret);
+              await fetch(`${supabaseUrl}/functions/v1/config-hub`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Sign': sign }, body });
+              invalidateConfig();
+              responseText = 'Saved';
+              break;
+            }
+            if (sub === 'reload') {
+              invalidateConfig();
+              responseText = 'Cache cleared';
+              break;
+            }
+            responseText = 'Unknown subcommand';
+            break;
+          case '/status':
+            responseText = `✅ Bot Status: Active\n\n` +
+                          `• Database: Connected\n` +
+                          `• Webhook: Working\n` +
+                          `• Real-time: Enabled\n` +
+                          `• Admin ID: ${adminId}\n\n` +
+                          `Everything is working perfectly!`;
+            break;
+          default:
+            responseText = `❓ Unknown command: ${message.text}\n\n` +
+                          `Available commands:\n` +
+                          `• /start - Welcome message\n` +
+                          `• /help - Help information\n` +
+                          `• /status - Bot status\n\n` +
+                          `Or just send me a regular message!`;
+        }
       
       // Send command response immediately
       if (telegramToken && responseText) {
