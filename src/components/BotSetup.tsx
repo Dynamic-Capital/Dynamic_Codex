@@ -13,8 +13,12 @@ export function BotSetup() {
   const [isSettingWebhook, setIsSettingWebhook] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
-  const adminUserId = '225513686';
+  // BEGIN TOKEN_PLACEHOLDER
+  const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+  // END TOKEN_PLACEHOLDER
+  // BEGIN ADMIN_PLACEHOLDER
+  const adminUserId = import.meta.env.VITE_ADMIN_USER_ID || '';
+  // END ADMIN_PLACEHOLDER
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
