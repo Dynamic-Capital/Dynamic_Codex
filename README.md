@@ -180,3 +180,17 @@ npm run dev
 │   └── App.tsx                       # Main application
 └── README.md                         # This file
 ```
+## Health & Verification
+
+Run function health checks to ensure your edge functions are deployed and configured correctly.
+
+```bash
+npm run verify:functions
+```
+
+This command validates your edge function deployments, webhook status, and required secrets.
+
+Common fixes when checks fail:
+- Set the Telegram webhook URL
+- Add missing secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET)
+
