@@ -1,5 +1,6 @@
 import { MessagesDashboard } from './components/MessagesDashboard';
 import { BotStatus } from './components/BotStatus';
+import DevDiagnostics from './components/DevDiagnostics';
 import { ThemeProvider } from './components/theme-provider';
 import { Toaster } from './components/ui/sonner';
 
@@ -11,6 +12,7 @@ function App() {
           <div className="space-y-6">
             <BotStatus />
             <MessagesDashboard />
+            {import.meta.env.MODE === 'development' && <DevDiagnostics />}
           </div>
         </div>
       </div>
