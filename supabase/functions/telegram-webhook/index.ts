@@ -1,10 +1,12 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.53.0';
+import { createClient } from "npm:@supabase/supabase-js@2.53.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+const VERSION = Deno.env.get("VERSION") ?? "0.0.0";
 
 interface TelegramMessage {
   message_id: number;
@@ -28,10 +30,50 @@ interface TelegramUpdate {
 }
 
 Deno.serve(async (req: Request) => {
+  const url = new URL(req.url);
+  if (
+    req.method === "GET" &&
+    (url.searchParams.get("health") === "1" || url.pathname === "/health")
+  ) {
+    const requiredEnv = [
+      "SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_WEBHOOK_SECRET",
+    ];
+    const missingEnv = requiredEnv.filter((k) => !Deno.env.get(k));
+    let db: "ok" | "fail" | "skipped" = "skipped";
+    if (missingEnv.length === 0) {
+      try {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { error } = await supabase
+          .from("messages")
+          .select("id", { head: true })
+          .limit(1);
+        db = error ? "fail" : "ok";
+      } catch {
+        db = "fail";
+      }
+    }
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        name: "telegram-webhook",
+        version: VERSION,
+        time: new Date().toISOString(),
+        checks: { env: missingEnv, db, dryRun: "skipped" },
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] === WEBHOOK START ===`);
   console.log(`Method: ${req.method}, URL: ${req.url}`);
-  
+
   try {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -45,33 +87,37 @@ Deno.serve(async (req: Request) => {
     // Only accept POST requests
     if (req.method !== "POST") {
       console.log(`❌ Method ${req.method} not allowed`);
-      return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Get and validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
+    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") ||
+      "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
     const adminId = Deno.env.get("ADMIN_USER_ID") || "225513686";
 
     console.log("🔧 Environment variables check:");
-    console.log(`- Supabase URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}`);
-    console.log(`- Supabase Key: ${supabaseKey ? '✅ Set' : '❌ Missing'}`);
-    console.log(`- Telegram Token: ${telegramToken ? '✅ Set' : '❌ Missing'}`);
-    console.log(`- Admin ID: ${adminId ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- Supabase URL: ${supabaseUrl ? "✅ Set" : "❌ Missing"}`);
+    console.log(`- Supabase Key: ${supabaseKey ? "✅ Set" : "❌ Missing"}`);
+    console.log(`- Telegram Token: ${telegramToken ? "✅ Set" : "❌ Missing"}`);
+    console.log(`- Admin ID: ${adminId ? "✅ Set" : "❌ Missing"}`);
 
     if (!supabaseUrl || !supabaseKey) {
       console.error("❌ Missing critical Supabase configuration");
-      return new Response(JSON.stringify({ 
-        error: "Server configuration error",
-        details: "Missing Supabase credentials"
-      }), { 
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Server configuration error",
+          details: "Missing Supabase credentials",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Parse the incoming update
@@ -83,70 +129,76 @@ Deno.serve(async (req: Request) => {
       console.log("📋 Parsed update:", JSON.stringify(update, null, 2));
     } catch (error) {
       console.error("❌ Failed to parse request body:", error);
-      return new Response(JSON.stringify({ 
-        error: "Invalid JSON payload" 
-      }), { 
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Invalid JSON payload",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
-    
+
     const message = update.message;
 
     if (!message || !message.from) {
       console.log("⚠️ No message to process in update");
-      return new Response(JSON.stringify({ 
-        status: "ok", 
-        message: "No message to process" 
-      }), { 
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          status: "ok",
+          message: "No message to process",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Handle commands first
-    if (message.text && message.text.startsWith('/')) {
+    if (message.text && message.text.startsWith("/")) {
       console.log(`🤖 Processing command: ${message.text}`);
-      
+
       let responseText = "";
-      
+
       switch (message.text.toLowerCase()) {
-        case '/start':
+        case "/start":
           responseText = `🤖 Welcome to the Dynamic Pool Bot!\n\n` +
-                        `I'm here to help you manage your pool activities.\n\n` +
-                        `Available commands:\n` +
-                        `• /start - Show this welcome message\n` +
-                        `• /help - Get help information\n` +
-                        `• /status - Check bot status\n\n` +
-                        `Just send me any message and I'll store it for you!`;
+            `I'm here to help you manage your pool activities.\n\n` +
+            `Available commands:\n` +
+            `• /start - Show this welcome message\n` +
+            `• /help - Get help information\n` +
+            `• /status - Check bot status\n\n` +
+            `Just send me any message and I'll store it for you!`;
           break;
-        case '/help':
+        case "/help":
           responseText = `🆘 Help Information\n\n` +
-                        `This bot stores all your messages and provides real-time monitoring.\n\n` +
-                        `Features:\n` +
-                        `• Message storage in database\n` +
-                        `• Real-time dashboard updates\n` +
-                        `• Admin notifications\n` +
-                        `• Message history tracking\n\n` +
-                        `Send any message to get started!`;
+            `This bot stores all your messages and provides real-time monitoring.\n\n` +
+            `Features:\n` +
+            `• Message storage in database\n` +
+            `• Real-time dashboard updates\n` +
+            `• Admin notifications\n` +
+            `• Message history tracking\n\n` +
+            `Send any message to get started!`;
           break;
-        case '/status':
+        case "/status":
           responseText = `✅ Bot Status: Active\n\n` +
-                        `• Database: Connected\n` +
-                        `• Webhook: Working\n` +
-                        `• Real-time: Enabled\n` +
-                        `• Admin ID: ${adminId}\n\n` +
-                        `Everything is working perfectly!`;
+            `• Database: Connected\n` +
+            `• Webhook: Working\n` +
+            `• Real-time: Enabled\n` +
+            `• Admin ID: ${adminId}\n\n` +
+            `Everything is working perfectly!`;
           break;
         default:
           responseText = `❓ Unknown command: ${message.text}\n\n` +
-                        `Available commands:\n` +
-                        `• /start - Welcome message\n` +
-                        `• /help - Help information\n` +
-                        `• /status - Bot status\n\n` +
-                        `Or just send me a regular message!`;
+            `Available commands:\n` +
+            `• /start - Welcome message\n` +
+            `• /help - Help information\n` +
+            `• /status - Bot status\n\n` +
+            `Or just send me a regular message!`;
       }
-      
+
       // Send command response immediately
       if (telegramToken && responseText) {
         console.log("📤 Sending command response...");
@@ -156,12 +208,12 @@ Deno.serve(async (req: Request) => {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                chat_id: message.chat.id, 
+              body: JSON.stringify({
+                chat_id: message.chat.id,
                 text: responseText,
-                parse_mode: "HTML"
+                parse_mode: "HTML",
               }),
-            }
+            },
           );
 
           if (!telegramResponse.ok) {
@@ -174,7 +226,7 @@ Deno.serve(async (req: Request) => {
           console.error("❌ Error sending command response:", error);
         }
       }
-      
+
       // Still store the command in database for tracking
     }
     // Initialize Supabase client
@@ -185,12 +237,15 @@ Deno.serve(async (req: Request) => {
     const { id: user_id, username, first_name, last_name } = message.from;
     const text = message.text || "";
     const date = new Date(message.date * 1000).toISOString();
-    const display_name = username || `${first_name || ''} ${last_name || ''}`.trim() || `User ${user_id}`;
+    const display_name = username ||
+      `${first_name || ""} ${last_name || ""}`.trim() || `User ${user_id}`;
 
     console.log("📝 Processing message:");
     console.log(`- User ID: ${user_id}`);
     console.log(`- Display Name: ${display_name}`);
-    console.log(`- Text: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
+    console.log(
+      `- Text: ${text.substring(0, 100)}${text.length > 100 ? "..." : ""}`,
+    );
     console.log(`- Date: ${date}`);
     console.log(`- Chat ID: ${message.chat.id}`);
 
@@ -209,57 +264,66 @@ Deno.serve(async (req: Request) => {
       console.log("✅ Database connection successful");
     } catch (error) {
       console.error("❌ Database connection failed:", error);
-      return new Response(JSON.stringify({
-        error: "Database connection failed",
-        details: error.message
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Database connection failed",
+          details: (error as Error).message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Insert message into database
     console.log("💾 Inserting message into database...");
     const { data: insertData, error: insertError } = await supabase
       .from("messages")
-      .insert([{ 
-        user_id: Number(user_id), 
-        username: display_name, 
-        text: text, 
-        date: date 
+      .insert([{
+        user_id: Number(user_id),
+        username: display_name,
+        text: text,
+        date: date,
       }])
       .select();
 
     if (insertError) {
       console.error("❌ Database insert error:", insertError);
-      return new Response(JSON.stringify({ 
-        error: "Database insert failed",
-        details: insertError.message
-      }), { 
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Database insert failed",
+          details: insertError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     console.log("✅ Message inserted successfully:", insertData);
 
     // Send confirmation message back to user (only for non-commands)
-    if (telegramToken && text.trim() && !text.startsWith('/')) {
+    if (telegramToken && text.trim() && !text.startsWith("/")) {
       console.log("📤 Sending confirmation to user...");
       try {
-        const confirmationMessage = `✅ Message received and stored!\n\nYour message: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`;
-        
+        const confirmationMessage =
+          `✅ Message received and stored!\n\nYour message: "${
+            text.substring(0, 100)
+          }${text.length > 100 ? "..." : ""}"`;
+
         const telegramResponse = await fetch(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              chat_id: message.chat.id, 
+            body: JSON.stringify({
+              chat_id: message.chat.id,
               text: confirmationMessage,
-              parse_mode: "HTML"
+              parse_mode: "HTML",
             }),
-          }
+          },
         );
 
         if (!telegramResponse.ok) {
@@ -274,26 +338,29 @@ Deno.serve(async (req: Request) => {
     }
 
     // Forward message to admin if configured and different from sender (skip commands)
-    if (telegramToken && adminId && text.trim() && user_id.toString() !== adminId && !text.startsWith('/')) {
+    if (
+      telegramToken && adminId && text.trim() &&
+      user_id.toString() !== adminId && !text.startsWith("/")
+    ) {
       console.log("📨 Forwarding message to admin...");
       try {
         const adminMessage = `📨 <b>New message from ${display_name}</b>\n` +
-                           `👤 User ID: <code>${user_id}</code>\n` +
-                           `💬 Chat ID: <code>${message.chat.id}</code>\n` +
-                           `🕒 Time: ${new Date(message.date * 1000).toLocaleString()}\n\n` +
-                           `📝 Message:\n<blockquote>${text}</blockquote>`;
-        
+          `👤 User ID: <code>${user_id}</code>\n` +
+          `💬 Chat ID: <code>${message.chat.id}</code>\n` +
+          `🕒 Time: ${new Date(message.date * 1000).toLocaleString()}\n\n` +
+          `📝 Message:\n<blockquote>${text}</blockquote>`;
+
         const telegramResponse = await fetch(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              chat_id: adminId, 
+            body: JSON.stringify({
+              chat_id: adminId,
               text: adminMessage,
-              parse_mode: "HTML"
+              parse_mode: "HTML",
             }),
-          }
+          },
         );
 
         if (!telegramResponse.ok) {
@@ -308,30 +375,41 @@ Deno.serve(async (req: Request) => {
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Webhook processing completed successfully in ${processingTime}ms`);
+    console.log(
+      `✅ Webhook processing completed successfully in ${processingTime}ms`,
+    );
     console.log(`[${new Date().toISOString()}] === WEBHOOK END ===`);
-    
-    return new Response(JSON.stringify({ 
-      status: "ok",
-      message: "Message processed successfully",
-      processing_time_ms: processingTime
-    }), { 
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
 
+    return new Response(
+      JSON.stringify({
+        status: "ok",
+        message: "Message processed successfully",
+        processing_time_ms: processingTime,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error("❌ Webhook error:", error);
-    console.log(`[${new Date().toISOString()}] === WEBHOOK ERROR END (${processingTime}ms) ===`);
-    
-    return new Response(JSON.stringify({ 
-      error: "Internal server error",
-      details: error.message,
-      processing_time_ms: processingTime
-    }), { 
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    console.log(
+      `[${
+        new Date().toISOString()
+      }] === WEBHOOK ERROR END (${processingTime}ms) ===`,
+    );
+
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: (error as Error).message,
+        processing_time_ms: processingTime,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
