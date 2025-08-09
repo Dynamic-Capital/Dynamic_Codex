@@ -29,7 +29,9 @@ export function WebhookTester() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<TestResult[]>([]);
 
-  const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
+  // BEGIN TOKEN_PLACEHOLDER
+  const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+  // END TOKEN_PLACEHOLDER
 
   const updateResult = (name: string, status: TestResult['status'], message: string, details?: string) => {
     setResults(prev => {

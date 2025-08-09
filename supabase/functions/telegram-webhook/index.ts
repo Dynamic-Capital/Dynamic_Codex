@@ -54,24 +54,29 @@ Deno.serve(async (req: Request) => {
     // Get and validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
-    const adminId = Deno.env.get("ADMIN_USER_ID") || "225513686";
+    const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const adminId = Deno.env.get("ADMIN_USER_ID");
+    // BEGIN ENV_WEBHOOK_SECRET
+    const webhookSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
+    // END ENV_WEBHOOK_SECRET
 
     console.log("🔧 Environment variables check:");
     console.log(`- Supabase URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}`);
     console.log(`- Supabase Key: ${supabaseKey ? '✅ Set' : '❌ Missing'}`);
     console.log(`- Telegram Token: ${telegramToken ? '✅ Set' : '❌ Missing'}`);
     console.log(`- Admin ID: ${adminId ? '✅ Set' : '❌ Missing'}`);
+    // BEGIN ENV_WEBHOOK_SECRET_LOG
+    console.log(`- Webhook Secret: ${webhookSecret ? '✅ Set' : '❌ Missing'}`);
+    // END ENV_WEBHOOK_SECRET_LOG
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error("❌ Missing critical Supabase configuration");
-      return new Response(JSON.stringify({ 
-        error: "Server configuration error",
-        details: "Missing Supabase credentials"
-      }), { 
-        status: 500,
+    if (!supabaseUrl || !supabaseKey || !telegramToken || !webhookSecret) {
+      console.error("❌ Missing critical configuration");
+      // BEGIN NO_5XX_ENV
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+      // END NO_5XX_ENV
     }
 
     // Parse the incoming update
@@ -83,12 +88,12 @@ Deno.serve(async (req: Request) => {
       console.log("📋 Parsed update:", JSON.stringify(update, null, 2));
     } catch (error) {
       console.error("❌ Failed to parse request body:", error);
-      return new Response(JSON.stringify({ 
-        error: "Invalid JSON payload" 
-      }), { 
-        status: 400,
+      // BEGIN NO_5XX_PARSE
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+      // END NO_5XX_PARSE
     }
     
     const message = update.message;
@@ -209,13 +214,12 @@ Deno.serve(async (req: Request) => {
       console.log("✅ Database connection successful");
     } catch (error) {
       console.error("❌ Database connection failed:", error);
-      return new Response(JSON.stringify({
-        error: "Database connection failed",
-        details: error.message
-      }), {
-        status: 500,
+      // BEGIN NO_5XX_DBTEST
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+      // END NO_5XX_DBTEST
     }
 
     // Insert message into database
@@ -232,13 +236,12 @@ Deno.serve(async (req: Request) => {
 
     if (insertError) {
       console.error("❌ Database insert error:", insertError);
-      return new Response(JSON.stringify({ 
-        error: "Database insert failed",
-        details: insertError.message
-      }), { 
-        status: 500,
+      // BEGIN NO_5XX_DB
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+      // END NO_5XX_DB
     }
 
     console.log("✅ Message inserted successfully:", insertData);
@@ -324,14 +327,12 @@ Deno.serve(async (req: Request) => {
     const processingTime = Date.now() - startTime;
     console.error("❌ Webhook error:", error);
     console.log(`[${new Date().toISOString()}] === WEBHOOK ERROR END (${processingTime}ms) ===`);
-    
-    return new Response(JSON.stringify({ 
-      error: "Internal server error",
-      details: error.message,
-      processing_time_ms: processingTime
-    }), { 
-      status: 500,
+
+    // BEGIN NO_5XX_CATCH
+    return new Response(JSON.stringify({ ok: true, processing_time_ms: processingTime }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
+    // END NO_5XX_CATCH
   }
 });

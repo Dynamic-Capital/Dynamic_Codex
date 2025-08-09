@@ -26,7 +26,9 @@ export function WebhookConfigurator() {
   const [currentWebhookInfo, setCurrentWebhookInfo] = useState<Record<string, unknown> | null>(null);
   const [isCheckingWebhook, setIsCheckingWebhook] = useState(false);
 
-  const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
+  // BEGIN TOKEN_PLACEHOLDER
+  const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+  // END TOKEN_PLACEHOLDER
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   
   // Generate the webhook URL
