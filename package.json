@@ -8,7 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:versions": "tsx ./infra/scripts/check-versions.ts",
+    "deps:check": "npx npm-check-updates --target=minor",
+    "deps:apply": "npx npm-check-updates -u && npm i",
+    "deno:lock": "deno cache --lock=deno.lock --lock-write supabase/functions/**/index.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -79,6 +83,7 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "tsx": "^4.15.0"
   }
 }
