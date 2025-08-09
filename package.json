@@ -7,8 +7,23 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint src --max-warnings=0",
+    "preview": "vite preview",
+    "fmt": "prettier -w \"**/*.{ts,tsx,js,jsx,md,json,yml,yaml}\"",
+    "deno:fmt": "deno fmt supabase/functions",
+    "deno:lint": "deno lint supabase/functions",
+    "deno:check": "deno check supabase/functions/**/index.ts",
+    "db:types": "supabase gen types typescript --project-id ${SUPABASE_URL##https:// | tr -d '/'} --schema public > packages/db/types/supabase.ts",
+    "analyze": "vite build --mode production && npx rollup-plugin-visualizer --open dist/stats.html || true",
+    "bundle:budget": "node ./infra/scripts/bundle-budget.js",
+    "check:versions": "tsx ./infra/scripts/check-versions.ts",
+    "check:secrets": "tsx ./infra/scripts/check-secrets.ts",
+    "verify:functions": "tsx ./infra/scripts/verify-all.ts",
+    "check:connect": "tsx ./infra/scripts/connectivity-matrix.ts",
+    "check:certs": "tsx ./infra/scripts/check-certs.ts",
+    "webapp:build": "npm --prefix ./apps/webapp run build",
+    "webapp:upload": "tsx ./infra/scripts/upload-webapp.ts",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -79,6 +94,16 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "prettier": "^3.3.3",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "tsx": "^4.16.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,md,json,yml,yaml}": "prettier -w"
   }
 }

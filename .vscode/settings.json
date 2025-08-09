@@ -1,0 +1,20 @@
+{
+  "deno.enable": false,
+  "deno.enablePaths": ["supabase/functions"],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "cSpell.words": [
+    "Dynamic",
+    "Codex",
+    "Supabase",
+    "grammY",
+    "TRON",
+    "BSC",
+    "USDT",
+    "Maldives",
+    "MVR"
+  ],
+  "files.associations": {
+    "supabase/functions/**/*.ts": "typescript"
+  }
+}
