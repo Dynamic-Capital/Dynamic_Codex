@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -63,7 +65,18 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
+    body {
+      @apply bg-background/80 text-foreground antialiased;
+      font-family: "Inter", sans-serif;
+      background-image: radial-gradient(
+          circle at 25% 25%,
+          hsl(var(--primary) / 0.15),
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 75% 75%,
+          hsl(var(--secondary) / 0.15),
+          transparent 50%
+        );
+    }
   }
-}
