@@ -1,0 +1,192 @@
+//@version=5
+strategy("Machine Learning: Lorentzian Classification (Improved)", overlay=true, precision=4, max_labels_count=500)
+
+import jdehorty/MLExtensions/2 as ml
+import jdehorty/KernelFunctions/2 as kernels
+
+//=========================
+//===== Inputs ============
+//=========================
+
+// expose prediction horizon
+predictionLen = input.int(4, "Prediction Horizon", minval=1, tooltip="Bars ahead to evaluate for training")
+
+// General settings
+neighborsCount = input.int(8, "Neighbors Count", minval=1, maxval=100)
+maxBarsBack = input.int(2000, "Max Bars Back")
+featureCount = input.int(5, "Feature Count", minval=2, maxval=5)
+colorCompression = input.int(1, "Color Compression", minval=1, maxval=10)
+showExits = input.bool(false, "Show Default Exits")
+useDynamicExits = input.bool(false, "Use Dynamic Exits")
+
+// toggle visuals
+showVisuals = input.bool(true, "Show Visuals")
+
+// risk management
+sl_pct = input.float(1.5, "Stop Loss %")
+tp_pct = input.float(3.0, "Take Profit %")
+
+//=========================
+//===== Helper ============
+//=========================
+
+normalize(val, mean, stddev) => stddev == 0 ? 0.0 : (val - mean) / stddev
+
+series_from(feature_string, _close, _high, _low, _hlc3, f_paramA, f_paramB) =>
+    switch feature_string
+        "RSI" => ml.n_rsi(_close, f_paramA, f_paramB)
+        "WT" => ml.n_wt(_hlc3, f_paramA, f_paramB)
+        "CCI" => ml.n_cci(_close, f_paramA, f_paramB)
+        "ADX" => ml.n_adx(_high, _low, _close, f_paramA)
+
+get_lorentzian_distance(int i, int featureCount, FeatureSeries featureSeries, FeatureArrays featureArrays) =>
+    switch featureCount
+        5 => math.log(1+math.abs(featureSeries.f1 - array.get(featureArrays.f1, i))) +
+             math.log(1+math.abs(featureSeries.f2 - array.get(featureArrays.f2, i))) +
+             math.log(1+math.abs(featureSeries.f3 - array.get(featureArrays.f3, i))) +
+             math.log(1+math.abs(featureSeries.f4 - array.get(featureArrays.f4, i))) +
+             math.log(1+math.abs(featureSeries.f5 - array.get(featureArrays.f5, i)))
+        4 => math.log(1+math.abs(featureSeries.f1 - array.get(featureArrays.f1, i))) +
+             math.log(1+math.abs(featureSeries.f2 - array.get(featureArrays.f2, i))) +
+             math.log(1+math.abs(featureSeries.f3 - array.get(featureArrays.f3, i))) +
+             math.log(1+math.abs(featureSeries.f4 - array.get(featureArrays.f4, i)))
+        3 => math.log(1+math.abs(featureSeries.f1 - array.get(featureArrays.f1, i))) +
+             math.log(1+math.abs(featureSeries.f2 - array.get(featureArrays.f2, i))) +
+             math.log(1+math.abs(featureSeries.f3 - array.get(featureArrays.f3, i)))
+        2 => math.log(1+math.abs(featureSeries.f1 - array.get(featureArrays.f1, i))) +
+             math.log(1+math.abs(featureSeries.f2 - array.get(featureArrays.f2, i)))
+
+//=========================
+//===== Feature Setup =====
+//=========================
+
+// user feature selection
+defFeature(name, defA, defB) =>
+    [str, a, b] = [input.string(name, options=["RSI","WT","CCI","ADX"], defval=name),
+                   input.int(defA, title="Param A"),
+                   input.int(defB, title="Param B")]
+    [str, a, b]
+
+[f1_str,f1_a,f1_b] = defFeature("RSI",14,1)
+[f2_str,f2_a,f2_b] = defFeature("WT",10,11)
+[f3_str,f3_a,f3_b] = defFeature("CCI",20,1)
+[f4_str,f4_a,f4_b] = defFeature("ADX",20,2)
+[f5_str,f5_a,f5_b] = defFeature("RSI",9,1)
+
+f1_raw = series_from(f1_str, close, high, low, hlc3, f1_a, f1_b)
+f2_raw = series_from(f2_str, close, high, low, hlc3, f2_a, f2_b)
+f3_raw = series_from(f3_str, close, high, low, hlc3, f3_a, f3_b)
+f4_raw = series_from(f4_str, close, high, low, hlc3, f4_a, f4_b)
+f5_raw = series_from(f5_str, close, high, low, hlc3, f5_a, f5_b)
+
+f1_norm = normalize(f1_raw, ta.sma(f1_raw, maxBarsBack), ta.stdev(f1_raw, maxBarsBack))
+f2_norm = normalize(f2_raw, ta.sma(f2_raw, maxBarsBack), ta.stdev(f2_raw, maxBarsBack))
+f3_norm = normalize(f3_raw, ta.sma(f3_raw, maxBarsBack), ta.stdev(f3_raw, maxBarsBack))
+f4_norm = normalize(f4_raw, ta.sma(f4_raw, maxBarsBack), ta.stdev(f4_raw, maxBarsBack))
+f5_norm = normalize(f5_raw, ta.sma(f5_raw, maxBarsBack), ta.stdev(f5_raw, maxBarsBack))
+
+featureSeries = FeatureSeries.new(f1_norm,f2_norm,f3_norm,f4_norm,f5_norm)
+
+var f1Array = array.new_float()
+var f2Array = array.new_float()
+var f3Array = array.new_float()
+var f4Array = array.new_float()
+var f5Array = array.new_float()
+array.push(f1Array, f1_norm)
+array.push(f2Array, f2_norm)
+array.push(f3Array, f3_norm)
+array.push(f4Array, f4_norm)
+array.push(f5Array, f5_norm)
+featureArrays = FeatureArrays.new(f1Array,f2Array,f3Array,f4Array,f5Array)
+
+//=========================
+//===== Classification ====
+//=========================
+
+Label direction = Label.new(long=1, short=-1, neutral=0)
+src = close
+y_train_series = src[predictionLen] < src ? direction.short : src[predictionLen] > src ? direction.long : direction.neutral
+var y_train_array = array.new_int()
+array.push(y_train_array, y_train_series)
+
+var predictions = array.new_int()
+var weights = array.new_float()
+var distances = array.new_float()
+
+size = math.min(maxBarsBack-1, array.size(y_train_array)-1)
+sizeLoop = math.min(maxBarsBack-1, size)
+
+lastDistance = -1.0
+if bar_index >= (last_bar_index >= maxBarsBack ? last_bar_index - maxBarsBack : 0)
+    for i = 0 to sizeLoop
+        d = get_lorentzian_distance(i, featureCount, featureSeries, featureArrays)
+        if d >= lastDistance and i % predictionLen
+            w = 1 / math.pow(d,2)
+            lastDistance := d
+            array.push(distances, d)
+            array.push(predictions, array.get(y_train_array, i))
+            array.push(weights, w)
+            if array.size(predictions) > neighborsCount
+                lastDistance := array.get(distances, math.round(neighborsCount*3/4))
+                array.shift(distances)
+                array.shift(predictions)
+                array.shift(weights)
+
+longWeight = 0.0
+shortWeight = 0.0
+for i = 0 to array.size(predictions)-1
+    lbl = array.get(predictions,i)
+    w = array.get(weights,i)
+    if lbl == direction.long
+        longWeight += w
+    else if lbl == direction.short
+        shortWeight += w
+prediction = longWeight > shortWeight ? 1 : longWeight < shortWeight ? -1 : 0
+
+//=========================
+//===== Trading Logic =====
+//=========================
+
+signal = prediction > 0 ? direction.long : prediction < 0 ? direction.short : direction.neutral
+
+var float longEntryPrice = na
+var float shortEntryPrice = na
+
+startLongTrade = ta.change(signal) and signal == direction.long
+startShortTrade = ta.change(signal) and signal == direction.short
+
+if startLongTrade
+    longEntryPrice := close
+if startShortTrade
+    shortEntryPrice := close
+
+longSL = longEntryPrice * (1 - sl_pct/100)
+longTP = longEntryPrice * (1 + tp_pct/100)
+shortSL = shortEntryPrice * (1 + sl_pct/100)
+shortTP = shortEntryPrice * (1 - tp_pct/100)
+
+exitLongSLTP = not na(longEntryPrice) and (close <= longSL or close >= longTP)
+exitShortSLTP = not na(shortEntryPrice) and (close >= shortSL or close <= shortTP)
+
+endLongTrade = exitLongSLTP
+endShortTrade = exitShortSLTP
+
+if startLongTrade
+    strategy.entry("Long", strategy.long)
+if endLongTrade
+    strategy.close("Long")
+if startShortTrade
+    strategy.entry("Short", strategy.short)
+if endShortTrade
+    strategy.close("Short")
+
+//=========================
+//===== Visuals ==========
+//=========================
+
+if showVisuals
+    c_pred = prediction > 0 ? color.from_gradient(prediction,0,neighborsCount/colorCompression,#787b86,#009988) : prediction < 0 ? color.from_gradient(prediction,-neighborsCount/colorCompression,0,#CC3311,#787b86) : na
+    barcolor(color.new(c_pred,50))
+    plotshape(startLongTrade, title="Buy", style=shape.labelup, location=location.belowbar, color=color.green, size=size.tiny)
+    plotshape(startShortTrade, title="Sell", style=shape.labeldown, location=location.abovebar, color=color.red, size=size.tiny)
+
