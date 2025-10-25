@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# BEGIN HUSKY-PRE-COMMIT
+npm run deno:lint && npm run lint && npx lint-staged
+# END HUSKY-PRE-COMMIT

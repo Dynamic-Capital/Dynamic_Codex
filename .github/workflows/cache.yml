@@ -1,0 +1,33 @@
+# BEGIN CACHE
+name: Cache
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+    env:
+      DENO_DIR: ~/.cache/deno
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+      - name: Cache Deno modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-
+      - name: Warm Deno cache
+        run: deno cache supabase/functions/**/index.ts
+# END CACHE
