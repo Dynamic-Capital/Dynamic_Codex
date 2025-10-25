@@ -11,6 +11,12 @@
 #include "logger.mqh"
 CTrade trade;
 
+//--- indicator handles for feature calculations
+int rsiHandle1 = INVALID_HANDLE;
+int adxHandle1 = INVALID_HANDLE;
+int rsiHandle2 = INVALID_HANDLE;
+int adxHandle2 = INVALID_HANDLE;
+
 input int    NeighborsCount    = 8;     // number of neighbors to consider
 input int    MaxBarsBack       = 2000;  // max history size
 input int    RSI_Period        = 14;    // feature 1
@@ -65,6 +71,16 @@ int OnInit()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(Slippage);
    LogVersion(VersionID);
+   //--- create indicator handles once to reduce repeated calculations
+   rsiHandle1 = iRSI(_Symbol, PERIOD_CURRENT, RSI_Period, PRICE_CLOSE);
+   adxHandle1 = iADX(_Symbol, PERIOD_CURRENT, ADX_Period);
+   rsiHandle2 = iRSI(_Symbol, HigherTF, RSI_Period, PRICE_CLOSE);
+   adxHandle2 = iADX(_Symbol, HigherTF, ADX_Period);
+
+   if(rsiHandle1==INVALID_HANDLE || adxHandle1==INVALID_HANDLE ||
+      rsiHandle2==INVALID_HANDLE || adxHandle2==INVALID_HANDLE)
+      return(INIT_FAILED);
+
    return(INIT_SUCCEEDED);
 }
 
@@ -89,10 +105,16 @@ void OnTick()
       return;
    lastProcessedBar = currentBar;
 
-   double rsi1 = iRSI(_Symbol, PERIOD_CURRENT, RSI_Period, PRICE_CLOSE, 0);
-   double adx1 = iADX(_Symbol, PERIOD_CURRENT, ADX_Period, 0, PRICE_CLOSE, 0);
-   double rsi2 = iRSI(_Symbol, HigherTF, RSI_Period, PRICE_CLOSE, 0);
-   double adx2 = iADX(_Symbol, HigherTF, ADX_Period, 0, PRICE_CLOSE, 0);
+   //--- fetch feature values from cached indicator handles
+   double rsi1Arr[], adx1Arr[], rsi2Arr[], adx2Arr[];
+   if(CopyBuffer(rsiHandle1,0,0,1,rsi1Arr) <= 0) return;
+   if(CopyBuffer(adxHandle1,0,0,1,adx1Arr) <= 0) return;
+   if(CopyBuffer(rsiHandle2,0,0,1,rsi2Arr) <= 0) return;
+   if(CopyBuffer(adxHandle2,0,0,1,adx2Arr) <= 0) return;
+   double rsi1 = rsi1Arr[0];
+   double adx1 = adx1Arr[0];
+   double rsi2 = rsi2Arr[0];
+   double adx2 = adx2Arr[0];
 
    // store feature row
    if(totalRows < MaxBarsBack)
@@ -108,8 +130,11 @@ void OnTick()
    // update label for bar 4 bars ago
    if(totalRows > 4)
    {
-      double futureClose = iClose(_Symbol, PERIOD_CURRENT, 0);
-      double pastClose   = iClose(_Symbol, PERIOD_CURRENT, 4);
+      double closes[];
+      if(CopyClose(_Symbol, PERIOD_CURRENT, 0, 5, closes) != 5)
+         return;
+      double futureClose = closes[0];
+      double pastClose   = closes[4];
       rows[4].label = (futureClose > pastClose) ? 1 : (futureClose < pastClose ? -1 : 0);
    }
 
@@ -241,9 +266,15 @@ double CalculateADR()
    int bars = MathMin(ADR_Period, iBars(_Symbol, PERIOD_D1));
    if(bars <= 0)
       return(0);
+   double highs[];
+   double lows[];
+   if(CopyHigh(_Symbol, PERIOD_D1, 0, bars, highs) != bars)
+      return(0);
+   if(CopyLow(_Symbol, PERIOD_D1, 0, bars, lows) != bars)
+      return(0);
    double sum = 0;
-   for(int i=1; i<=bars; ++i)
-      sum += (iHigh(_Symbol, PERIOD_D1, i-1) - iLow(_Symbol, PERIOD_D1, i-1)) / _Point;
+   for(int i=0; i<bars; ++i)
+      sum += (highs[i] - lows[i]) / _Point;
    return(sum / bars);
 }
 
@@ -279,6 +310,9 @@ void SendReport(string action)
 
 void OnDeinit(const int reason)
 {
-   // nothing to clean up
+   if(rsiHandle1 != INVALID_HANDLE) IndicatorRelease(rsiHandle1);
+   if(adxHandle1 != INVALID_HANDLE) IndicatorRelease(adxHandle1);
+   if(rsiHandle2 != INVALID_HANDLE) IndicatorRelease(rsiHandle2);
+   if(adxHandle2 != INVALID_HANDLE) IndicatorRelease(adxHandle2);
 }
 
