@@ -1,0 +1,45 @@
+name: Verify Functions
+
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      WEBAPP_URL: ${{ secrets.WEBAPP_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      VIP_CHAT_ID: ${{ secrets.VIP_CHAT_ID }}
+      BSC_RPC_URL: ${{ secrets.BSC_RPC_URL }}
+      TRON_API_URL: ${{ secrets.TRON_API_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check required secrets
+        run: |
+          missing=()
+          for var in SUPABASE_URL WEBAPP_URL TELEGRAM_BOT_TOKEN VIP_CHAT_ID BSC_RPC_URL TRON_API_URL; do
+            if [ -z "${!var}" ]; then
+              missing+=("$var")
+            fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Missing secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run verification
+        run: npm run verify:functions
