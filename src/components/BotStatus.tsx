@@ -9,7 +9,9 @@ export function BotStatus() {
   const [messageCount, setMessageCount] = useState<number>(0);
   const [isOnline, setIsOnline] = useState<boolean>(false);
 
-  const botToken = '8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc';
+  // BEGIN TOKEN_PLACEHOLDER
+  const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
+  // END TOKEN_PLACEHOLDER
   const botUsername = 'Dynamic_Pool_BOT';
 
   useEffect(() => {

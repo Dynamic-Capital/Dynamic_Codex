@@ -32,8 +32,8 @@ For the edge function, you'll need to set these in your Supabase dashboard:
 ### 3. Create a Telegram Bot
 
 ✅ **Bot Username**: `@Dynamic_Pool_BOT`
-✅ **Bot Token**: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
-✅ **Admin User ID**: `225513686`
+✅ **Bot Token**: `<YOUR_TELEGRAM_BOT_TOKEN>`
+✅ **Admin User ID**: `<YOUR_TELEGRAM_USER_ID>`
 
 Your bot is already configured! You can find it at: [@Dynamic_Pool_BOT](https://t.me/Dynamic_Pool_BOT)
 
@@ -55,7 +55,7 @@ Both functions are automatically deployed when you connect to Supabase.
 After deployment, you can set your Telegram webhook URL using the **Webhook Config** tab in the dashboard, or manually:
 
 ```bash
-curl "https://api.telegram.org/bot8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc/setWebhook" \
+curl "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook" \
   -d url=https://<YOUR_SUPABASE_PROJECT>.supabase.co/functions/v1/telegram-webhook
 ```
 
@@ -78,8 +78,8 @@ Use the **Webhook Config** tab to:
 ## 🔧 Environment Variables to Set in Supabase
 
 Make sure these are set in your Supabase Edge Function environment:
-- `TELEGRAM_BOT_TOKEN`: `8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc`
-- `ADMIN_USER_ID`: `225513686`
+- `TELEGRAM_BOT_TOKEN`: `<YOUR_TELEGRAM_BOT_TOKEN>`
+- `ADMIN_USER_ID`: `<YOUR_TELEGRAM_USER_ID>`
 
 ## 🧪 Testing Your Bot
 
