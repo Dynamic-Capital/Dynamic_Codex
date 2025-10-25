@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.53.0';
+import { Bot } from 'npm:grammy@1.19.1';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,48 @@ interface TelegramMessage {
 interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+}
+
+async function dispatchWorkflow(
+  workflow: string,
+  inputs: Record<string, string>,
+  token?: string,
+  repo?: string,
+): Promise<boolean> {
+  if (!token || !repo) return false;
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify({ ref: "main", inputs }),
+    },
+  );
+  return res.ok;
+}
+
+async function fetchLastDeployStatus(
+  token?: string,
+  repo?: string,
+): Promise<string> {
+  if (!token || !repo) return "GitHub credentials missing";
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/actions/workflows/deploy.yml/runs?per_page=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+  if (!res.ok) return "Failed to fetch deploy status";
+  const data = await res.json();
+  const run = data.workflow_runs?.[0];
+  if (!run) return "No deploy runs found";
+  return `Last deploy: ${run.status}${run.conclusion ? ` (${run.conclusion})` : ""}`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -55,13 +98,22 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8423362395:AAGVVE-Fy6NPMWTQ77nDDKYZUYXh7Z2eIhc";
-    const adminId = Deno.env.get("ADMIN_USER_ID") || "225513686";
+    const adminIds = (Deno.env.get("ADMIN_USER_ID") || "225513686")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id);
+    const adminId = adminIds[0];
+    const githubToken = Deno.env.get("GITHUB_TOKEN");
+    const githubRepo = Deno.env.get("GITHUB_REPOSITORY");
+    const bot = telegramToken ? new Bot(telegramToken) : undefined;
 
     console.log("🔧 Environment variables check:");
     console.log(`- Supabase URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}`);
     console.log(`- Supabase Key: ${supabaseKey ? '✅ Set' : '❌ Missing'}`);
     console.log(`- Telegram Token: ${telegramToken ? '✅ Set' : '❌ Missing'}`);
-    console.log(`- Admin ID: ${adminId ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- Admin IDs: ${adminIds.length ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- GitHub Token: ${githubToken ? '✅ Set' : '❌ Missing'}`);
+    console.log(`- GitHub Repo: ${githubRepo ? '✅ Set' : '❌ Missing'}`);
 
     if (!supabaseUrl || !supabaseKey) {
       console.error("❌ Missing critical Supabase configuration");
@@ -107,10 +159,12 @@ Deno.serve(async (req: Request) => {
     // Handle commands first
     if (message.text && message.text.startsWith('/')) {
       console.log(`🤖 Processing command: ${message.text}`);
-      
+
+      const [command, ...args] = message.text.split(/\s+/);
+      const isAdmin = adminIds.includes(message.from.id.toString());
       let responseText = "";
-      
-      switch (message.text.toLowerCase()) {
+
+      switch (command.toLowerCase()) {
         case '/start':
           responseText = `🤖 Welcome to the Dynamic Pool Bot!\n\n` +
                         `I'm here to help you manage your pool activities.\n\n` +
@@ -131,12 +185,37 @@ Deno.serve(async (req: Request) => {
                         `Send any message to get started!`;
           break;
         case '/status':
-          responseText = `✅ Bot Status: Active\n\n` +
-                        `• Database: Connected\n` +
-                        `• Webhook: Working\n` +
-                        `• Real-time: Enabled\n` +
-                        `• Admin ID: ${adminId}\n\n` +
-                        `Everything is working perfectly!`;
+          if (isAdmin) {
+            responseText = await fetchLastDeployStatus(githubToken, githubRepo);
+          } else {
+            responseText = `✅ Bot Status: Active\n\n` +
+                          `• Database: Connected\n` +
+                          `• Webhook: Working\n` +
+                          `• Real-time: Enabled\n` +
+                          `• Admin IDs: ${adminIds.join(', ')}\n\n` +
+                          `Everything is working perfectly!`;
+          }
+          break;
+        case '/health':
+          if (!isAdmin) {
+            responseText = '⛔ Unauthorized';
+          } else {
+            const ok = await dispatchWorkflow('verify.yml', { dry_run: 'true' }, githubToken, githubRepo);
+            responseText = ok
+              ? '🩺 Verify workflow dispatched (dry run)'
+              : '❌ Failed to dispatch verify workflow';
+          }
+          break;
+        case '/deploy':
+          if (!isAdmin) {
+            responseText = '⛔ Unauthorized';
+          } else {
+            const env = args[0] || '';
+            const ok = await dispatchWorkflow('deploy.yml', env ? { environment: env } : {}, githubToken, githubRepo);
+            responseText = ok
+              ? `🚀 Deploy workflow dispatched${env ? ' for ' + env : ''}`
+              : '❌ Failed to dispatch deploy workflow';
+          }
           break;
         default:
           responseText = `❓ Unknown command: ${message.text}\n\n` +
@@ -146,35 +225,18 @@ Deno.serve(async (req: Request) => {
                         `• /status - Bot status\n\n` +
                         `Or just send me a regular message!`;
       }
-      
+
       // Send command response immediately
-      if (telegramToken && responseText) {
+      if (bot && responseText) {
         console.log("📤 Sending command response...");
         try {
-          const telegramResponse = await fetch(
-            `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                chat_id: message.chat.id, 
-                text: responseText,
-                parse_mode: "HTML"
-              }),
-            }
-          );
-
-          if (!telegramResponse.ok) {
-            const errorText = await telegramResponse.text();
-            console.error("❌ Failed to send command response:", errorText);
-          } else {
-            console.log("✅ Command response sent successfully");
-          }
+          await bot.api.sendMessage(message.chat.id, responseText, { parse_mode: "HTML" });
+          console.log("✅ Command response sent successfully");
         } catch (error) {
           console.error("❌ Error sending command response:", error);
         }
       }
-      
+
       // Still store the command in database for tracking
     }
     // Initialize Supabase client
@@ -244,37 +306,19 @@ Deno.serve(async (req: Request) => {
     console.log("✅ Message inserted successfully:", insertData);
 
     // Send confirmation message back to user (only for non-commands)
-    if (telegramToken && text.trim() && !text.startsWith('/')) {
+    if (bot && text.trim() && !text.startsWith('/')) {
       console.log("📤 Sending confirmation to user...");
       try {
         const confirmationMessage = `✅ Message received and stored!\n\nYour message: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`;
-        
-        const telegramResponse = await fetch(
-          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              chat_id: message.chat.id, 
-              text: confirmationMessage,
-              parse_mode: "HTML"
-            }),
-          }
-        );
-
-        if (!telegramResponse.ok) {
-          const errorText = await telegramResponse.text();
-          console.error("❌ Failed to send confirmation to user:", errorText);
-        } else {
-          console.log("✅ Confirmation sent to user successfully");
-        }
+        await bot.api.sendMessage(message.chat.id, confirmationMessage, { parse_mode: "HTML" });
+        console.log("✅ Confirmation sent to user successfully");
       } catch (error) {
         console.error("❌ Error sending confirmation to user:", error);
       }
     }
 
     // Forward message to admin if configured and different from sender (skip commands)
-    if (telegramToken && adminId && text.trim() && user_id.toString() !== adminId && !text.startsWith('/')) {
+    if (bot && adminId && text.trim() && user_id.toString() !== adminId && !text.startsWith('/')) {
       console.log("📨 Forwarding message to admin...");
       try {
         const adminMessage = `📨 <b>New message from ${display_name}</b>\n` +
@@ -282,26 +326,8 @@ Deno.serve(async (req: Request) => {
                            `💬 Chat ID: <code>${message.chat.id}</code>\n` +
                            `🕒 Time: ${new Date(message.date * 1000).toLocaleString()}\n\n` +
                            `📝 Message:\n<blockquote>${text}</blockquote>`;
-        
-        const telegramResponse = await fetch(
-          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              chat_id: adminId, 
-              text: adminMessage,
-              parse_mode: "HTML"
-            }),
-          }
-        );
-
-        if (!telegramResponse.ok) {
-          const errorText = await telegramResponse.text();
-          console.error("❌ Failed to send message to admin:", errorText);
-        } else {
-          console.log("✅ Message forwarded to admin successfully");
-        }
+        await bot.api.sendMessage(adminId, adminMessage, { parse_mode: "HTML" });
+        console.log("✅ Message forwarded to admin successfully");
       } catch (error) {
         console.error("❌ Error sending message to admin:", error);
       }
