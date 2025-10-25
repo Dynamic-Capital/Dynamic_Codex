@@ -31,8 +31,16 @@ Deno.serve(async (req: Request) => {
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] === WEBHOOK START ===`);
   console.log(`Method: ${req.method}, URL: ${req.url}`);
-  
+
   try {
+    const url = new URL(req.url);
+    if (url.searchParams.get('health') === '1') {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
       console.log("✅ CORS preflight request handled");
