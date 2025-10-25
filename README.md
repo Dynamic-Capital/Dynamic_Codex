@@ -154,6 +154,32 @@ npm install
 npm run dev
 ```
 
+## Health & Verification
+
+Run local diagnostics to ensure your functions are configured correctly:
+
+```bash
+npm run verify:functions
+```
+
+This script checks:
+
+- Required environment secrets are set
+- Telegram webhook points to your project
+- Edge functions respond with `{ pong: true }`
+
+Common fixes:
+
+- **Reset webhook**
+  ```bash
+  curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+    -d url=https://<YOUR_PROJECT>.supabase.co/functions/v1/telegram-webhook
+  ```
+- **Set environment secrets**
+  ```bash
+  supabase secrets set TELEGRAM_BOT_TOKEN="<TOKEN>" SUPABASE_SERVICE_ROLE_KEY="<KEY>" SUPABASE_URL="https://<YOUR_PROJECT>.supabase.co"
+  ```
+
 ## Security
 
 - All database operations use Row Level Security (RLS)
